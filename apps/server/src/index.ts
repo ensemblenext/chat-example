@@ -9,6 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 app.post('/chat-token', (req, res) => {
+  // generate a test JWT token at https://ensembleapp.ai/secrets
   res.json({
     token: 'abcd...',
   });
