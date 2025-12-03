@@ -22,25 +22,13 @@ A demo monorepo showcasing the ChatWidget integration.
 
 2. Start the development servers:
    ```bash
-   # In one terminal - start the server
-   cd server && npm run dev
-
-   # In another terminal - start the web app
-   cd web && npm run dev
+   npm run dev
    ```
 
-3. Open your browser:
-   - Web app: http://localhost:3000
-   - Server: http://localhost:3001
+3. Open your browser to http://localhost:4000. Server will be running at http://localhost:4001
 
 ### Features
 
 - **Web App**: Landing page with a chat bubble that opens the ChatWidget
 - **Server**: Simple Express server with a `/chat-token` endpoint
 - **ChatWidget**: Integrated chat component from `@ensemblenext/client-sdk`
-
-### Usage
-
-1. Visit http://localhost:3000
-2. Click the blue chat bubble in the bottom right
-3. The ChatWidget will open and connect to the server at http://localhost:3001
