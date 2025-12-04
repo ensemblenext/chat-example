@@ -2,15 +2,19 @@
 
 import { useRef, useState } from 'react';
 
-// Global widget types (loaded via script tag)
 interface EmbeddableChatWidgetConfig {
-  api: string;
-  containerId?: string;
-  headers?: Record<string, string>;
-  threadId?: string;
+  api: {
+    baseUrl: string;
+    token: string;
+    headers?: Record<string, string>;
+  };
+  threadId: string;
+  agentId?: string;
+  agentExecutionId?: string;
   title?: string;
   introMessage?: string;
   inputPlaceholder?: string;
+  containerId?: string;
 }
 
 declare global {
@@ -68,13 +72,12 @@ export default function Home() {
 
       if (!configRef.current) {
         configRef.current = {
-          api: 'https://<ensemble-server>',
-          headers: {
-            Authorization: `Bearer ${currentToken}`,
-            threadid: 'session123',
-            agentid: 'agent456',
+          api: {
+            baseUrl: 'https://<ensemble-server>',
+            token: currentToken!,
           },
           threadId: 'session123',
+          agentId: 'agent456',
           title: 'Support Agent',
           // specify the container for the chat widget
           containerId: 'chat-widget-container',
