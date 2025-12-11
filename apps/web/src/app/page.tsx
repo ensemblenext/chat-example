@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 interface EmbeddableChatWidgetConfig {
   api: {
@@ -14,6 +14,12 @@ interface EmbeddableChatWidgetConfig {
   title?: string;
   introMessage?: string;
   inputPlaceholder?: string;
+  anchor?: {
+    enabled?: boolean;
+    initiallyOpen?: boolean;
+    render?: (args: { isOpen: boolean; toggle: () => void }) => ReactNode;
+  };
+  onAuthError?: () => Promise<string | void> | string | void;
   containerId?: string;
 }
 
@@ -31,11 +37,11 @@ declare global {
 }
 
 export default function Home() {
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const configRef = useRef<typeof window.chatWidgetConfig | null>(null);
 
+  // load widget from URL
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
       // TODO: on CDN with versioning
@@ -54,65 +60,103 @@ export default function Home() {
       document.head.appendChild(script);
     });
 
-  const openChat = async () => {
+  const fetchToken = async (): Promise<string> => {
+    const newToken = await fetch('https://<your-server>/chat-token', { method: 'POST' }).then((r) =>
+      r.json().then((data) => data.token),
+    );
+    setToken(newToken);
+    return newToken;
+  };
+
+  const handleAuthError = async () => {
+    try {
+      const newToken = await fetchToken();
+      if (!configRef.current) {
+        throw new Error('Chat widget config is not initialized.');
+      }
+      configRef.current.api.token = newToken;
+      window.ChatWidget?.updateConfig?.({
+        api: { ...configRef.current.api, token: newToken },
+      });
+      return newToken;
+    } catch (err) {
+      console.error('Failed to refresh chat token', err);
+    }
+  };
+
+  // initialize chat widget
+  const initChat = async () => {
+    if (hasInitialized) {
+      return;
+    }
+
     try {
       await loadWidget();
 
-      let currentToken = token;
-      if (!currentToken) {
-        // point to your Server endpoint here. JSON response should be { "token": "abcd..."}
-        currentToken = await fetch('http://<customer-server>/chat-token', { method: 'POST' })
-          .then((r) => r.json().then(data => data.token))
-          .catch((err) => {
-            console.error('Failed to fetch chat token', err);
-            throw err;
-          });
-        setToken(currentToken);
-      }
+      const currentToken = token ?? (await fetchToken());
 
       if (!configRef.current) {
         configRef.current = {
           api: {
-            baseUrl: 'https://<ensemble-server>',
+            baseUrl: 'https://service.ensembleapp.ai',
             token: currentToken!,
           },
           threadId: 'session123',
-          agentId: 'agent456',
+          // either agentId or agentExecutionId must be provided
+          // agentId: 'agent456',
+          // agentExecutionId: 'agent456',
           title: 'Support Agent',
+          anchor: {
+            enabled: true,
+            initiallyOpen: false,
+            render: ({ isOpen, toggle }) => (
+              <button
+                type="button"
+                onClick={toggle}
+                className="fixed bottom-6 right-6 w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center"
+                aria-label={isOpen ? 'Close chat' : 'Open chat'}
+                aria-expanded={isOpen}
+              >
+                <svg
+                  className="w-8 h-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+              </button>
+            ),
+          },
+          onAuthError: handleAuthError,
           // specify the container for the chat widget
-          containerId: 'chat-widget-container',
+          // containerId is not needed for the popup version
+          containerId: undefined,
         };
       }
 
-      setIsChatOpen(true);
-
-      // Wait for DOM element to be available before initializing widget
-      const initWidget = () => {
-        const container = document.getElementById('chat-widget-container');
-        if (container) {
-          if (!hasInitialized && configRef.current) {
-            window.chatWidgetConfig = configRef.current;
-            window.ChatWidget?.init?.(configRef.current);
-            setHasInitialized(true);
-          } else if (window.ChatWidget) {
-            window.ChatWidget.show();
-          }
-        } else {
-          // Container not ready yet, try again in next frame
-          setTimeout(initWidget, 10);
-        }
-      };
-      setTimeout(initWidget, 0);
+      if (!hasInitialized && configRef.current) {
+        window.chatWidgetConfig = configRef.current;
+        await window.ChatWidget?.init?.(configRef.current);
+        setHasInitialized(true);
+      }
     } catch (error) {
-      console.error('Failed to open chat widget', error);
+      console.error('Failed to initialize chat widget', error);
     }
   };
 
-  const closeChat = () => {
-    if (window.ChatWidget) {
-      window.ChatWidget.hide();
-    }
-    setIsChatOpen(false);
+  useEffect(() => {
+    void initChat();
+  }, []);
+
+  const showChat = async () => {
+    await initChat();
+    window.ChatWidget?.show?.();
   };
 
   return (
@@ -172,7 +216,7 @@ export default function Home() {
           <p className="text-gray-600 mb-6">Click the chat bubble to connect with our support team</p>
           <div className="flex justify-center">
             <button
-              onClick={openChat}
+              onClick={showChat}
               className="inline-flex items-center text-blue-600 font-semibold hover:text-blue-700 transition-colors cursor-pointer"
             >
               <span>Chat with us</span>
@@ -182,53 +226,6 @@ export default function Home() {
             </button>
           </div>
         </div>
-      </div>
-
-      <button
-        onClick={() => isChatOpen ? closeChat() : openChat()}
-        className="fixed bottom-6 right-6 w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center"
-      >
-        <svg
-          className="w-8 h-8"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-          />
-        </svg>
-      </button>
-
-      <div className={`fixed bottom-24 right-6 ${isChatOpen ? 'block' : 'hidden'}`}>
-        {isChatOpen && (
-          <button
-            onClick={closeChat}
-            className="absolute -top-3 -right-3 w-8 h-8 bg-gray-600 hover:bg-gray-700 text-white rounded-full shadow-lg flex items-center justify-center z-10"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        )}
-        {/* Container for the chat widget. Its ID should be specified in the config */}
-        <div
-          id="chat-widget-container"
-          className="w-96 h-[28rem] bg-white rounded-lg shadow-xl overflow-hidden"
-        />
       </div>
     </div>
   );
