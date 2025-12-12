@@ -19,6 +19,7 @@ interface EmbeddableChatWidgetConfig {
     initiallyOpen?: boolean;
     render?: (args: { isOpen: boolean; toggle: () => void }) => ReactNode;
   };
+  dataContext?: unknown;
   onAuthError?: () => Promise<string | void> | string | void;
   containerId?: string;
 }
@@ -132,6 +133,10 @@ export default function Home() {
                 </svg>
               </button>
             ),
+          },
+          dataContext: {
+            name: "ACME Corp",
+            location: "123 Main St, Springfield",
           },
           onAuthError: handleAuthError,
           // specify the container for the chat widget
