@@ -1,2 +1,4 @@
 /node_modules
 /.turbo
+/apps/server/dist
+/apps/web/.turbo

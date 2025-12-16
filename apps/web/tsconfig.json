@@ -19,7 +19,10 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@ensembleapp/client-sdk/dist/widget/widget.global": [
+        "../../node_modules/@ensembleapp/client-sdk/dist/widget/widget.global.d.ts"
+      ]
     }
   },
   "include": [

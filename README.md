@@ -13,6 +13,22 @@ A demo monorepo showcasing the ChatWidget integration.
 - Node.js 18+
 - npm
 
+### Environment variables
+- Web: create .env with the following variables:
+```
+# widget version (latest or pin to specific version e.g. 1.0.1)
+NEXT_PUBLIC_SDK_VERSION=latest
+# Your server endpoint that generate a JWT token from Ensemble secret
+TOKEN_ENDPOINT=https://<my-server>/chat-token
+```
+
+- Server: create .env with the following variables:
+```
+# the secret from https://ensembleapp.ai
+JWT_SECRET=abcd...
+```
+
+
 ### Development
 
 1. Install dependencies:

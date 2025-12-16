@@ -1,53 +1,30 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-
-interface EmbeddableChatWidgetConfig {
-  api: {
-    baseUrl: string;
-    token: string;
-    headers?: Record<string, string>;
-  };
-  threadId: string;
-  agentId?: string;
-  agentExecutionId?: string;
-  title?: string;
-  introMessage?: string;
-  inputPlaceholder?: string;
-  anchor?: {
-    enabled?: boolean;
-    initiallyOpen?: boolean;
-    render?: (args: { isOpen: boolean; toggle: () => void }) => ReactNode;
-  };
-  dataContext?: unknown;
-  onAuthError?: () => Promise<string | void> | string | void;
-  containerId?: string;
-}
-
-declare global {
-  interface Window {
-    chatWidgetConfig: EmbeddableChatWidgetConfig;
-    ChatWidget?: {
-      init: (config: EmbeddableChatWidgetConfig) => Promise<void>;
-      destroy: () => void;
-      hide: () => void;
-      show: () => void;
-      updateConfig: (config: Partial<EmbeddableChatWidgetConfig>) => void;
-    };
-  }
-}
+import { useEffect, useRef, useState } from 'react';
+import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
+import { chatWidgets } from './chat-widgets';
 
 export default function Home() {
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
-  const configRef = useRef<typeof window.chatWidgetConfig | null>(null);
+  const [dataContext, setDataContext] = useState<EmbeddableChatWidgetConfig['dataContext']>({
+    name: 'ACME Corp',
+    location: '123 Main St, Springfield',
+  });
+  const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
+
+  useEffect(() => {
+    if (window.chatWidgetConfig?.dataContext) {
+      setDataContext(window.chatWidgetConfig.dataContext);
+    }
+  }, []);
 
   // load widget from URL
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
-      // TODO: on CDN with versioning
-      const widgetURL = '/widget/widget.global.js';
-      
+      const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
+      const widgetURL = `https://cdn.jsdelivr.net/npm/@ensembleapp/client-sdk@${sdkVersion}/dist/widget/widget.global.js`;
+
       if (window.ChatWidget || document.querySelector(`script[src="${widgetURL}"]`)) {
         resolve();
         return;
@@ -56,13 +33,14 @@ export default function Home() {
       const script = document.createElement('script');
       script.src = widgetURL;
       script.async = true;
+      script.crossOrigin = 'anonymous';
       script.onload = () => resolve();
       script.onerror = () => reject(new Error('Failed to load chat widget'));
       document.head.appendChild(script);
     });
 
   const fetchToken = async (): Promise<string> => {
-    const newToken = await fetch('https://<your-server>/chat-token', { method: 'POST' }).then((r) =>
+    const newToken = await fetch(process.env.TOKEN_ENDPOINT!, { method: 'POST' }).then((r) =>
       r.json().then((data) => data.token),
     );
     setToken(newToken);
@@ -102,10 +80,10 @@ export default function Home() {
             baseUrl: 'https://service.ensembleapp.ai',
             token: currentToken!,
           },
-          threadId: 'session123',
+          threadId: 'thread123',
           // either agentId or agentExecutionId must be provided
           // agentId: 'agent456',
-          // agentExecutionId: 'agent456',
+          agentExecutionId: 'agent789',
           title: 'Support Agent',
           anchor: {
             enabled: true,
@@ -134,14 +112,15 @@ export default function Home() {
               </button>
             ),
           },
-          dataContext: {
-            name: "ACME Corp",
-            location: "123 Main St, Springfield",
-          },
+          dataContext,
           onAuthError: handleAuthError,
+          widgets: chatWidgets,
           // specify the container for the chat widget
           // containerId is not needed for the popup version
           containerId: undefined,
+          popupSize: {
+            width: '800px',
+          }
         };
       }
 
@@ -157,7 +136,21 @@ export default function Home() {
 
   useEffect(() => {
     void initChat();
+    // We intentionally run init once on mount; dependencies would cause re-init churn
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!configRef.current) {
+      return;
+    }
+
+    configRef.current.dataContext = dataContext;
+
+    if (hasInitialized) {
+      window.ChatWidget?.updateConfig?.({ dataContext });
+    }
+  }, [dataContext, hasInitialized]);
 
   const showChat = async () => {
     await initChat();

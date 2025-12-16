@@ -9,12 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@ensemblenext/client-sdk": "file:ensemblenext-client-sdk-1.0.0.tgz",
+    "lucide-react": "^0.462.0",
     "next": "16.0.6",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "zod": "3.25.76"
   },
   "devDependencies": {
+    "@ensembleapp/client-sdk": "^0.0.3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
