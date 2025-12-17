@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
-import { chatWidgets } from './chat-widgets';
+import { customChatWidgets } from './widgets/chat-widgets';
 
 export default function Home() {
   const [token, setToken] = useState<string | null>(null);
@@ -88,7 +88,7 @@ export default function Home() {
           threadId: 'thread123',
           // either agentId or agentExecutionId must be provided
           // agentId: 'agent456',
-          agentExecutionId: 'agent789',
+          // agentExecutionId: 'agent789',
           title: 'Support Agent',
           anchor: {
             enabled: true,
@@ -119,7 +119,8 @@ export default function Home() {
           },
           dataContext,
           onAuthError: handleAuthError,
-          widgets: chatWidgets,
+          // custom widgets
+          widgets: customChatWidgets,
           // specify the container for the chat widget
           // containerId is not needed for the popup version
           containerId: undefined,
