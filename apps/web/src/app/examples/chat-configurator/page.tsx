@@ -12,8 +12,21 @@ type ConfigState = {
   agentExecutionId: string;
   introMessage: string;
   inputPlaceholder: string;
+  // Real ChatWidgetStyles properties
   primaryColor: string;
+  primaryTextColor: string;
+  backgroundColor: string;
+  borderColor: string;
   headerTextColor: string;
+  userBubbleTextColor: string;
+  assistantBubbleBackground: string;
+  assistantBubbleTextColor: string;
+  fontFamily: string;
+  borderRadius: string;
+  inputBackground: string;
+  inputTextColor: string;
+  inputPlaceholderColor: string;
+  thoughtsBorderColor: string;
 };
 
 const DEFAULT_AGENT_EXECUTION_ID = '8AZviohTgTscP2rOQGkh';
@@ -21,6 +34,7 @@ const DEFAULT_AGENT_EXECUTION_ID = '8AZviohTgTscP2rOQGkh';
 export default function ChatConfiguratorExample() {
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [activeTab, setActiveTab] = useState<'configuration' | 'styles'>('configuration');
   const [configState, setConfigState] = useState<ConfigState>({
     mode: 'popup',
     title: 'Configurable Agent',
@@ -28,8 +42,21 @@ export default function ChatConfiguratorExample() {
     agentExecutionId: DEFAULT_AGENT_EXECUTION_ID,
     introMessage: 'Hi there! How can I assist you today?',
     inputPlaceholder: 'Ask me anything…',
+    // Real ChatWidgetStyles properties
     primaryColor: '#2563eb',
+    primaryTextColor: '#ffffff',
+    backgroundColor: '#ffffff',
+    borderColor: '#e2e8f0',
     headerTextColor: '#111827',
+    userBubbleTextColor: '#ffffff',
+    assistantBubbleBackground: '#f1f5f9',
+    assistantBubbleTextColor: '#374151',
+    fontFamily: 'system-ui',
+    borderRadius: '12px',
+    inputBackground: '#ffffff',
+    inputTextColor: '#374151',
+    inputPlaceholderColor: '#9ca3af',
+    thoughtsBorderColor: '#e2e8f0',
   });
   const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const lastModeRef = useRef<Mode>('popup');
@@ -97,7 +124,19 @@ export default function ChatConfiguratorExample() {
       inputPlaceholder: configState.inputPlaceholder,
       styles: {
         primaryColor: configState.primaryColor,
+        primaryTextColor: configState.primaryTextColor,
+        backgroundColor: configState.backgroundColor,
+        borderColor: configState.borderColor,
         headerTextColor: configState.headerTextColor,
+        userBubbleTextColor: configState.userBubbleTextColor,
+        assistantBubbleBackground: configState.assistantBubbleBackground,
+        assistantBubbleTextColor: configState.assistantBubbleTextColor,
+        fontFamily: configState.fontFamily,
+        borderRadius: configState.borderRadius,
+        inputBackground: configState.inputBackground,
+        inputTextColor: configState.inputTextColor,
+        inputPlaceholderColor: configState.inputPlaceholderColor,
+        thoughtsBorderColor: configState.thoughtsBorderColor,
       },
       onAuthError: handleAuthError,
       anchor: isEmbedded
@@ -150,7 +189,7 @@ export default function ChatConfiguratorExample() {
     } catch (err) {
       console.warn('Failed to update widget config', err);
     }
-  }, [hasInitialized, configState.title, configState.threadId, configState.agentExecutionId, configState.introMessage, configState.inputPlaceholder, configState.primaryColor, configState.headerTextColor, buildConfig]);
+  }, [hasInitialized, configState.title, configState.threadId, configState.agentExecutionId, configState.introMessage, configState.inputPlaceholder, configState.primaryColor, configState.primaryTextColor, configState.backgroundColor, configState.borderColor, configState.headerTextColor, configState.userBubbleTextColor, configState.assistantBubbleBackground, configState.assistantBubbleTextColor, configState.fontFamily, configState.borderRadius, configState.inputBackground, configState.inputTextColor, configState.inputPlaceholderColor, configState.thoughtsBorderColor, buildConfig]);
 
   // Full reload only when switching modes (popup/embedded)
   useEffect(() => {
@@ -239,7 +278,7 @@ export default function ChatConfiguratorExample() {
     setConfigState((prev) => ({ ...prev, [key]: value }));
   };
 
-  const formRows = useMemo(
+  const configurationRows = useMemo(
     () => [
       {
         label: 'Thread Id',
@@ -318,6 +357,12 @@ export default function ChatConfiguratorExample() {
           />
         ),
       },
+    ],
+    [configState],
+  );
+
+  const styleRows = useMemo(
+    () => [
       {
         label: 'Primary Color',
         input: (
@@ -330,6 +375,39 @@ export default function ChatConfiguratorExample() {
         ),
       },
       {
+        label: 'Primary Text Color',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.primaryTextColor}
+            onChange={(e) => handleChange('primaryTextColor', e.target.value)}
+          />
+        ),
+      },
+      {
+        label: 'Background Color',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.backgroundColor}
+            onChange={(e) => handleChange('backgroundColor', e.target.value)}
+          />
+        ),
+      },
+      {
+        label: 'Border Color',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.borderColor}
+            onChange={(e) => handleChange('borderColor', e.target.value)}
+          />
+        ),
+      },
+      {
         label: 'Header Text Color',
         input: (
           <input
@@ -338,6 +416,117 @@ export default function ChatConfiguratorExample() {
             value={configState.headerTextColor}
             onChange={(e) => handleChange('headerTextColor', e.target.value)}
           />
+        ),
+      },
+      {
+        label: 'User Bubble Text Color',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.userBubbleTextColor}
+            onChange={(e) => handleChange('userBubbleTextColor', e.target.value)}
+          />
+        ),
+      },
+      {
+        label: 'Assistant Bubble Background',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.assistantBubbleBackground}
+            onChange={(e) => handleChange('assistantBubbleBackground', e.target.value)}
+          />
+        ),
+      },
+      {
+        label: 'Assistant Bubble Text Color',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.assistantBubbleTextColor}
+            onChange={(e) => handleChange('assistantBubbleTextColor', e.target.value)}
+          />
+        ),
+      },
+      {
+        label: 'Input Background',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.inputBackground}
+            onChange={(e) => handleChange('inputBackground', e.target.value)}
+          />
+        ),
+      },
+      {
+        label: 'Input Text Color',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.inputTextColor}
+            onChange={(e) => handleChange('inputTextColor', e.target.value)}
+          />
+        ),
+      },
+      {
+        label: 'Input Placeholder Color',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.inputPlaceholderColor}
+            onChange={(e) => handleChange('inputPlaceholderColor', e.target.value)}
+          />
+        ),
+      },
+      {
+        label: 'Thoughts Border Color',
+        input: (
+          <input
+            type="color"
+            className="h-10 w-16 rounded border border-slate-200"
+            value={configState.thoughtsBorderColor}
+            onChange={(e) => handleChange('thoughtsBorderColor', e.target.value)}
+          />
+        ),
+      },
+      {
+        label: 'Font Family',
+        input: (
+          <select
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+            value={configState.fontFamily}
+            onChange={(e) => handleChange('fontFamily', e.target.value)}
+          >
+            <option value="system-ui">System UI</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Verdana, sans-serif">Verdana</option>
+          </select>
+        ),
+      },
+      {
+        label: 'Border Radius',
+        input: (
+          <select
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+            value={configState.borderRadius}
+            onChange={(e) => handleChange('borderRadius', e.target.value)}
+          >
+            <option value="4px">4px</option>
+            <option value="8px">8px</option>
+            <option value="12px">12px</option>
+            <option value="16px">16px</option>
+            <option value="20px">20px</option>
+            <option value="24px">24px</option>
+          </select>
         ),
       },
     ],
@@ -361,10 +550,33 @@ export default function ChatConfiguratorExample() {
 
         <div className="flex flex-col gap-6 lg:flex-row flex-1 min-h-0">
           <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm lg:w-[280px] flex flex-col">
-            <h2 className="mb-3 text-sm font-semibold text-slate-900 p-4 pb-0">Configuration</h2>
-            <div className="flex-1 overflow-y-auto p-4 pt-0">
+            <div className="p-4 pb-0">
+              <div className="flex rounded-lg bg-slate-100 p-1 mb-3">
+                <button
+                  onClick={() => setActiveTab('configuration')}
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${
+                    activeTab === 'configuration'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Configuration
+                </button>
+                <button
+                  onClick={() => setActiveTab('styles')}
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${
+                    activeTab === 'styles'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Styles
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
               <div className="space-y-3">
-                {formRows.map((row) => (
+                {(activeTab === 'configuration' ? configurationRows : styleRows).map((row) => (
                   <label key={row.label} className="block text-sm">
                     <span className="text-slate-700">{row.label}</span>
                     <div className="mt-1">{row.input}</div>
