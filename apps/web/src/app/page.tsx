@@ -13,6 +13,12 @@ const examples = [
     description: "Two-pane layout with thread list and embedded chat widget (no popup).",
     badge: "Preview",
   },
+  {
+    slug: "chat-configurator",
+    title: "Chat Configurator",
+    description: "Interactive controls for EmbeddableChatWidgetConfig with live updates.",
+    badge: "Preview",
+  },
 ];
 
 export default function Home() {

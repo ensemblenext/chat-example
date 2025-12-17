@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { customChatWidgets } from '@/components/widgets/chat-widgets';
+import Link from 'next/link';
 
 export default function AcmeExamplePage() {
   const [token, setToken] = useState<string | null>(null);
@@ -167,6 +168,11 @@ export default function AcmeExamplePage() {
       {/* Static Content Section */}
       <div className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-6">
+            <Link href="/" className="hover:text-slate-700">HOME</Link>
+            <span className="mx-1">{'>'}</span>
+            EXAMPLE
+          </p>
           <h1 className="text-6xl font-bold text-blue-600 mb-6">
             Welcome to ACME
           </h1>

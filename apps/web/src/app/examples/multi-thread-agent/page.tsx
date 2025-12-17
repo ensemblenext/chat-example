@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { Menu, Plus } from "lucide-react";
+import Link from 'next/link';
 
 type Thread = { id: string; title: string; summary?: string };
 
@@ -149,7 +150,14 @@ export default function MultiThreadAgentExample() {
 
   return (
     <div className="h-screen bg-slate-50 overflow-hidden">
-      <div className="relative mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-6 px-6 py-8 md:flex-row overflow-hidden">
+      <div className="relative mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-6 px-6 py-8 overflow-hidden">
+        <header className="flex flex-col gap-2 flex-shrink-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <Link href="/" className="hover:text-slate-700">HOME</Link>
+            <span className="mx-1">{'>'}</span>
+            EXAMPLE
+          </p>
+        </header>
         <section className="relative flex min-h-0 flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
