@@ -29,20 +29,22 @@ SECRET_ID=
 SECRET_VALUE=
 ```
 
-
 ### Development
 
-1. Install dependencies:
+1. Sync "@ensembleapp/client-sdk" in package.json to the same version as your process.env.NEXT_PUBLIC_SDK_VERSION.
+This ensure the typeahead is scoped correctly to the widget version.
+
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the development servers:
+3. Start the development servers:
    ```bash
    npm run dev
    ```
 
-3. Open your browser to http://localhost:4000. Server will be running at http://localhost:4001
+4. Open your browser to http://localhost:4000. Server will be running at http://localhost:4001
 
 ### Features
 
