@@ -15,7 +15,7 @@ export const vendorCardPropsSchema = z.object({
   review: z.string().optional().describe('A highlighted review from this vendor'),
   hours: z.string().optional(),
   highlights: z.array(z.string()).optional(),
-});
+}).describe('Card showing information about a business, vendor, or service provider');
 export type VendorCardProps = z.infer<typeof vendorCardPropsSchema>;
 
 export const VendorCard = ({
