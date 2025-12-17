@@ -86,10 +86,10 @@ export default function AcmeExamplePage() {
             baseUrl: 'https://service.ensembleapp.ai',
             token: currentToken!,
           },
-          threadId: 'thread123',
+          threadId: `demo-${Date.now()}`,
           // either agentId or agentExecutionId must be provided
           // agentId: 'agent456',
-          // agentExecutionId: 'agent789',
+          agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
           title: 'Support Agent',
           anchor: {
             enabled: true,

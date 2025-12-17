@@ -7,9 +7,9 @@ import Link from 'next/link';
 type Thread = { id: string; title: string; summary?: string };
 
 const initialThreads: Thread[] = [
-  { id: `thread-${Date.now()}-1`, title: 'Team standup summary', summary: 'Summarize daily notes into action items.' },
-  { id: `thread-${Date.now()}-2`, title: 'Bug triage helper', summary: 'Categorize and prioritize new issues.' },
-  { id: `thread-${Date.now()}-3`, title: 'Docs drafting', summary: 'Rewrite specs into concise docs.' },
+  { id: `demo-${Date.now()}-1`, title: 'Team standup summary', summary: 'Summarize daily notes into action items.' },
+  { id: `demo-${Date.now()}-2`, title: 'Bug triage helper', summary: 'Categorize and prioritize new issues.' },
+  { id: `demo-${Date.now()}-3`, title: 'Docs drafting', summary: 'Rewrite specs into concise docs.' },
 ];
 
 export default function MultiThreadAgentExample() {
@@ -91,14 +91,12 @@ export default function MultiThreadAgentExample() {
             token: currentToken!,
           },
           threadId: selectedThread.id,
-          // agentExecutionId: 'agent123',
+          agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
           onAuthError: handleAuthError,
+          introMessage: 'Hello! How can I assist you today?',
           widgets: [],
           anchor: { enabled: false },
           containerId: 'chat-widget-container',
-          popupSize: {
-            width: '800px',
-          },
         };
       }
 

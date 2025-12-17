@@ -29,17 +29,15 @@ type ConfigState = {
   thoughtsBorderColor: string;
 };
 
-const DEFAULT_AGENT_EXECUTION_ID = '8AZviohTgTscP2rOQGkh';
-
 export default function ChatConfiguratorExample() {
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState<'configuration' | 'styles'>('configuration');
   const [configState, setConfigState] = useState<ConfigState>({
     mode: 'popup',
-    title: 'Configurable Agent',
-    threadId: 'config-thread',
-    agentExecutionId: DEFAULT_AGENT_EXECUTION_ID,
+    title: '',
+    threadId: `demo-${Date.now()}`,
+    agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
     introMessage: 'Hi there! How can I assist you today?',
     inputPlaceholder: 'Ask me anything…',
     // Real ChatWidgetStyles properties
@@ -280,26 +278,26 @@ export default function ChatConfiguratorExample() {
 
   const configurationRows = useMemo(
     () => [
-      {
-        label: 'Thread Id',
-        input: (
-          <input
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
-            value={configState.threadId}
-            onChange={(e) => handleChange('threadId', e.target.value)}
-          />
-        ),
-      },
-      {
-        label: 'Agent Execution Id',
-        input: (
-          <input
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
-            value={configState.agentExecutionId}
-            onChange={(e) => handleChange('agentExecutionId', e.target.value)}
-          />
-        ),
-      },
+      // {
+      //   label: 'Thread Id',
+      //   input: (
+      //     <input
+      //       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+      //       value={configState.threadId}
+      //       onChange={(e) => handleChange('threadId', e.target.value)}
+      //     />
+      //   ),
+      // },
+      // {
+      //   label: 'Agent Execution Id',
+      //   input: (
+      //     <input
+      //       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+      //       value={configState.agentExecutionId}
+      //       onChange={(e) => handleChange('agentExecutionId', e.target.value)}
+      //     />
+      //   ),
+      // },
       {
         label: 'Mode',
         input: (
@@ -577,9 +575,19 @@ export default function ChatConfiguratorExample() {
             <div className="flex-1 overflow-y-auto px-4 pb-4">
               <div className="space-y-3">
                 {(activeTab === 'configuration' ? configurationRows : styleRows).map((row) => (
-                  <label key={row.label} className="block text-sm">
-                    <span className="text-slate-700">{row.label}</span>
-                    <div className="mt-1">{row.input}</div>
+                  <label key={row.label} className={`block text-sm ${
+                    activeTab === 'styles'
+                      ? 'flex items-center justify-between gap-2'
+                      : ''
+                  }`}>
+                    <span className={`text-slate-700 ${
+                      activeTab === 'styles' ? 'flex-1 min-w-0' : ''
+                    }`}>
+                      {row.label}
+                    </span>
+                    <div className={activeTab === 'styles' ? 'flex-shrink-0' : 'mt-1'}>
+                      {row.input}
+                    </div>
                   </label>
                 ))}
               </div>
