@@ -1,5 +1,4 @@
 'use client';
-
 import { useEffect, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { chatWidgets } from './chat-widgets';
@@ -18,6 +17,8 @@ export default function Home() {
       setDataContext(window.chatWidgetConfig.dataContext);
     }
   }, []);
+
+  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT;
 
   // load widget from URL
   const loadWidget = () =>
@@ -40,7 +41,11 @@ export default function Home() {
     });
 
   const fetchToken = async (): Promise<string> => {
-    const newToken = await fetch(process.env.TOKEN_ENDPOINT!, { method: 'POST' }).then((r) =>
+    if (!tokenEndpoint) {
+      throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
+    }
+
+    const newToken = await fetch(tokenEndpoint, { method: 'POST' }).then((r) =>
       r.json().then((data) => data.token),
     );
     setToken(newToken);

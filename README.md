@@ -24,8 +24,9 @@ TOKEN_ENDPOINT=https://<my-server>/chat-token
 
 - Server: create .env with the following variables:
 ```
-# the secret from https://ensembleapp.ai
-JWT_SECRET=abcd...
+# Get your secret id/value from https://ensembleapp.ai
+SECRET_ID=
+SECRET_VALUE=
 ```
 
 
