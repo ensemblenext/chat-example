@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 
+/**
+ * Simple example of using the chat widget as a pop up
+ */
 function AcmeExamplePage() {
   const { getIdToken } = useAuth();
   const [token, setToken] = useState<string | null>(null);
@@ -105,10 +108,10 @@ function AcmeExamplePage() {
             baseUrl: 'https://service.ensembleapp.ai',
             token: currentToken!,
           },
-          threadId: 'thread123',
+          threadId: `demo-${Date.now()}`,
           // either agentId or agentExecutionId must be provided
           // agentId: 'agent456',
-          // agentExecutionId: 'agent789',
+          agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
           title: 'Support Agent',
           anchor: {
             enabled: true,
@@ -163,6 +166,17 @@ function AcmeExamplePage() {
     void initChat();
     // We intentionally run init once on mount; dependencies would cause re-init churn
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // remove the chat widget on navigating away. Don't do this if you want the chat to persist across pages
+  useEffect(() => {
+    return () => {
+      try {
+        window.ChatWidget?.destroy?.();
+      } catch (err) {
+        console.error('Failed to destroy chat widget on unmount', err);
+      }
+    };
   }, []);
 
   useEffect(() => {

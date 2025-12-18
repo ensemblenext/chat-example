@@ -31,18 +31,18 @@ type ConfigState = {
   thoughtsBorderColor: string;
 };
 
-const DEFAULT_AGENT_EXECUTION_ID = '8AZviohTgTscP2rOQGkh';
 
 function ChatConfiguratorExample() {
   const { getIdToken } = useAuth();
+
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState<'configuration' | 'styles'>('configuration');
   const [configState, setConfigState] = useState<ConfigState>({
     mode: 'popup',
-    title: 'Configurable Agent',
-    threadId: 'config-thread',
-    agentExecutionId: DEFAULT_AGENT_EXECUTION_ID,
+    title: '',
+    threadId: `demo-${Date.now()}`,
+    agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
     introMessage: 'Hi there! How can I assist you today?',
     inputPlaceholder: 'Ask me anything…',
     // Real ChatWidgetStyles properties
@@ -190,6 +190,17 @@ function ChatConfiguratorExample() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // remove the chat widget on navigating away. Don't do this if you want the chat to persist across pages
+  useEffect(() => {
+    return () => {
+      try {
+        window.ChatWidget?.destroy?.();
+      } catch (err) {
+        console.error('Failed to destroy chat widget on unmount', err);
+      }
+    };
+  }, []);
+
   // Update config without full reload for non-structural changes
   useEffect(() => {
     if (!hasInitialized || !configRef.current) return;
@@ -299,26 +310,26 @@ function ChatConfiguratorExample() {
 
   const configurationRows = useMemo(
     () => [
-      {
-        label: 'Thread Id',
-        input: (
-          <input
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
-            value={configState.threadId}
-            onChange={(e) => handleChange('threadId', e.target.value)}
-          />
-        ),
-      },
-      {
-        label: 'Agent Execution Id',
-        input: (
-          <input
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
-            value={configState.agentExecutionId}
-            onChange={(e) => handleChange('agentExecutionId', e.target.value)}
-          />
-        ),
-      },
+      // {
+      //   label: 'Thread Id',
+      //   input: (
+      //     <input
+      //       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+      //       value={configState.threadId}
+      //       onChange={(e) => handleChange('threadId', e.target.value)}
+      //     />
+      //   ),
+      // },
+      // {
+      //   label: 'Agent Execution Id',
+      //   input: (
+      //     <input
+      //       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+      //       value={configState.agentExecutionId}
+      //       onChange={(e) => handleChange('agentExecutionId', e.target.value)}
+      //     />
+      //   ),
+      // },
       {
         label: 'Mode',
         input: (
@@ -361,7 +372,7 @@ function ChatConfiguratorExample() {
               onChange={(e) => handleChange('introMessage', e.target.value)}
             />
             <p className="mt-1 text-xs text-slate-500">
-                applicable only for new conversations
+              applicable only for new conversations
             </p>
           </div>
         ),
@@ -573,21 +584,19 @@ function ChatConfiguratorExample() {
               <div className="flex rounded-lg bg-slate-100 p-1 mb-3">
                 <button
                   onClick={() => setActiveTab('configuration')}
-                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${
-                    activeTab === 'configuration'
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${activeTab === 'configuration'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   Configuration
                 </button>
                 <button
                   onClick={() => setActiveTab('styles')}
-                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${
-                    activeTab === 'styles'
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${activeTab === 'styles'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   Styles
                 </button>
@@ -596,9 +605,17 @@ function ChatConfiguratorExample() {
             <div className="flex-1 overflow-y-auto px-4 pb-4">
               <div className="space-y-3">
                 {(activeTab === 'configuration' ? configurationRows : styleRows).map((row) => (
-                  <label key={row.label} className="block text-sm">
-                    <span className="text-slate-700">{row.label}</span>
-                    <div className="mt-1">{row.input}</div>
+                  <label key={row.label} className={`block text-sm ${activeTab === 'styles'
+                      ? 'flex items-center justify-between gap-2'
+                      : ''
+                    }`}>
+                    <span className={`text-slate-700 ${activeTab === 'styles' ? 'flex-1 min-w-0' : ''
+                      }`}>
+                      {row.label}
+                    </span>
+                    <div className={activeTab === 'styles' ? 'flex-shrink-0' : 'mt-1'}>
+                      {row.input}
+                    </div>
                   </label>
                 ))}
               </div>
@@ -608,7 +625,7 @@ function ChatConfiguratorExample() {
           <div className="flex-1 rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col lg:min-h-0">
             {configState.mode === 'popup' && (
               <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Live preview</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Live preview</p>
               </div>
             )}
             <div className="relative flex-1 flex overflow-hidden">
