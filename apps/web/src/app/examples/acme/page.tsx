@@ -3,8 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { customChatWidgets } from '@/components/widgets/chat-widgets';
 import Link from 'next/link';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
-export default function AcmeExamplePage() {
+function AcmeExamplePage() {
+  const { getIdToken } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [dataContext, setDataContext] = useState<EmbeddableChatWidgetConfig['dataContext']>({
@@ -19,7 +22,7 @@ export default function AcmeExamplePage() {
     }
   }, []);
 
-  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT;
+  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
 
   // load widget from URL
   const loadWidget = () =>
@@ -46,9 +49,25 @@ export default function AcmeExamplePage() {
       throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
     }
 
-    const newToken = await fetch(tokenEndpoint, { method: 'POST' }).then((r) =>
-      r.json().then((data) => data.token),
-    );
+    const firebaseToken = await getIdToken();
+    if (!firebaseToken) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${firebaseToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch token');
+    }
+
+    const data = await response.json();
+    const newToken = data.token;
     setToken(newToken);
     return newToken;
   };
@@ -237,5 +256,13 @@ export default function AcmeExamplePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AcmeExamplePageWrapper() {
+  return (
+    <ProtectedRoute>
+      <AcmeExamplePage />
+    </ProtectedRoute>
   );
 }

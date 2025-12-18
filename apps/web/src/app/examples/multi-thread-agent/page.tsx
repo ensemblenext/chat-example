@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { Menu, Plus } from "lucide-react";
 import Link from 'next/link';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Thread = { id: string; title: string; summary?: string };
 
@@ -12,7 +14,8 @@ const initialThreads: Thread[] = [
   { id: `thread-${Date.now()}-3`, title: 'Docs drafting', summary: 'Rewrite specs into concise docs.' },
 ];
 
-export default function MultiThreadAgentExample() {
+function MultiThreadAgentExample() {
+  const { getIdToken } = useAuth();
   const [threads, setThreads] = useState<Thread[]>(initialThreads);
   const [selectedThreadId, setSelectedThreadId] = useState<string>(initialThreads[0].id);
   const [token, setToken] = useState<string | null>(null);
@@ -26,7 +29,7 @@ export default function MultiThreadAgentExample() {
     [threads, selectedThreadId],
   );
 
-  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT;
+  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
 
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
@@ -52,9 +55,25 @@ export default function MultiThreadAgentExample() {
       throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
     }
 
-    const newToken = await fetch(tokenEndpoint, { method: 'POST' }).then((r) =>
-      r.json().then((data) => data.token),
-    );
+    const firebaseToken = await getIdToken();
+    if (!firebaseToken) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${firebaseToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch token');
+    }
+
+    const data = await response.json();
+    const newToken = data.token;
     setToken(newToken);
     return newToken;
   };
@@ -237,5 +256,13 @@ export default function MultiThreadAgentExample() {
         </section>
       </div>
     </div>
+  );
+}
+
+export default function MultiThreadAgentExampleWrapper() {
+  return (
+    <ProtectedRoute>
+      <MultiThreadAgentExample />
+    </ProtectedRoute>
   );
 }

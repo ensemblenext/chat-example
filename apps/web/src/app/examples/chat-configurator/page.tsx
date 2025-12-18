@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import Link from 'next/link';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Mode = 'popup' | 'embedded';
 
@@ -31,7 +33,8 @@ type ConfigState = {
 
 const DEFAULT_AGENT_EXECUTION_ID = '8AZviohTgTscP2rOQGkh';
 
-export default function ChatConfiguratorExample() {
+function ChatConfiguratorExample() {
+  const { getIdToken } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState<'configuration' | 'styles'>('configuration');
@@ -61,7 +64,7 @@ export default function ChatConfiguratorExample() {
   const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const lastModeRef = useRef<Mode>('popup');
 
-  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT;
+  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
 
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
@@ -87,9 +90,25 @@ export default function ChatConfiguratorExample() {
       throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
     }
 
-    const newToken = await fetch(tokenEndpoint, { method: 'POST' }).then((r) =>
-      r.json().then((data) => data.token),
-    );
+    const firebaseToken = await getIdToken();
+    if (!firebaseToken) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(tokenEndpoint, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${firebaseToken}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch token');
+    }
+
+    const data = await response.json();
+    const newToken = data.token;
     setToken(newToken);
     return newToken;
   };
@@ -210,7 +229,7 @@ export default function ChatConfiguratorExample() {
             // window.ChatWidget.destroy();
             console.log('Widget destroyed successfully');
           } catch (err) {
-            console.warn('Destroy failed, forcing cleanup:', err?.message || err);
+            console.warn('Destroy failed, forcing cleanup:', err instanceof Error ? err.message : err);
             // Force cleanup without calling destroy() to avoid DOM issues
             delete window.ChatWidget;
           }
@@ -605,5 +624,13 @@ export default function ChatConfiguratorExample() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChatConfiguratorExampleWrapper() {
+  return (
+    <ProtectedRoute>
+      <ChatConfiguratorExample />
+    </ProtectedRoute>
   );
 }

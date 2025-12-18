@@ -1,4 +1,8 @@
+'use client';
+
 import Link from "next/link";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 
 const examples = [
   {
@@ -21,10 +25,25 @@ const examples = [
   },
 ];
 
-export default function Home() {
+function HomePage() {
+  const { user, signOut } = useAuth();
+
   return (
     <main className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-5xl px-6 py-16">
+        {/* User info header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="text-sm text-slate-600">
+            Signed in as <span className="font-medium">{user?.email}</span>
+          </div>
+          <button
+            onClick={signOut}
+            className="rounded-lg bg-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-300 transition"
+          >
+            Sign Out
+          </button>
+        </div>
+
         <header className="mb-12 text-center">
           <p className="mb-3 inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
             Examples Gallery
@@ -66,5 +85,13 @@ export default function Home() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function HomeWrapper() {
+  return (
+    <ProtectedRoute>
+      <HomePage />
+    </ProtectedRoute>
   );
 }

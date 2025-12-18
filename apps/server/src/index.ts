@@ -8,17 +8,19 @@ const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 dotenv.config();
 
+const AUDIENCE = 'ensembleapp.ai';
+
 const app = express();
 const port = process.env.PORT || 4001;
-const secretId = process.env.SECRET_ID;
-const secretValue = process.env.SECRET_VALUE;
+const keyId = process.env.ENSEMBLE_KEY_ID;
+const keySecret = process.env.ENSEMBLE_KEY_SECRET;
 
 app.use(cors());
 app.use(express.json());
 
 app.post('/chat-token', (req, res) => {
-  if (!secretId || !secretValue) {
-    res.status(500).json({ error: 'SECRET_ID/SECRET_VALUE not set in the environment' });
+  if (!keyId || !keySecret) {
+    res.status(500).json({ error: 'ENSEMBLE_KEY_ID/ENSEMBLE_KEY_SECRET not set in the environment' });
     return;
   }
 
@@ -29,10 +31,11 @@ app.post('/chat-token', (req, res) => {
     sub: userId,
     exp: nowInSeconds + 60 * 60, // 1 hour
     iat: nowInSeconds,
-    aud: 'ensembleapp.ai',
-    secretId,
-    userId,
-    }, secretValue, { algorithm: 'HS256' });
+    aud: AUDIENCE,
+  }, keySecret, {
+    algorithm: 'HS256',
+    keyid: keyId,
+  });
 
   res.json({ token });
 });

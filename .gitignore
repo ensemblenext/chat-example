@@ -5,3 +5,11 @@
 apps/server/.env.development
 /apps/server/node_modules
 /apps/server/.turbo
+
+# Firebase
+.firebase/
+*-debug.log
+firebase-debug.log
+.apphosting/
+
+.DS_Store

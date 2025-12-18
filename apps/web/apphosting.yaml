@@ -1,0 +1,92 @@
+# Firebase App Hosting configuration for Next.js web app
+# See: https://firebase.google.com/docs/app-hosting/configure
+
+# Cloud Run runtime configuration
+runConfig:
+  # Minimum instances to keep warm (0 = scale to zero when idle)
+  minInstances: 0
+
+  # Maximum concurrent instances
+  maxInstances: 10
+
+  # Concurrent requests per instance
+  concurrency: 80
+
+  # CPU allocation (in whole numbers, default: 1)
+  cpu: 1
+
+  # Memory in MiB (default: 512)
+  memoryMiB: 512
+
+# Environment variables
+env:
+  # Public environment variables (exposed to browser)
+  - variable: NEXT_PUBLIC_SDK_VERSION
+    value: latest
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_TOKEN_ENDPOINT
+    value: /api/chat-token
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Server-side secrets (NOT exposed to browser)
+  # These reference Cloud Secret Manager secrets
+  # Set via Firebase Console or: firebase apphosting:secrets:set ENSEMBLE_KEY_ID
+  - variable: ENSEMBLE_KEY_ID
+    secret: ENSEMBLE_KEY_ID
+    availability:
+      - RUNTIME
+
+  - variable: ENSEMBLE_KEY_SECRET
+    secret: ENSEMBLE_KEY_SECRET
+    availability:
+      - RUNTIME
+
+  # Firebase Client Config (public - safe to expose)
+  # Get from Firebase Console → Project Settings → Your apps
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyAh4F-6A4IrxgrzWKKpSC6_rYGf_0ocjXQ
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: ensembleapp-chat.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: ensembleapp-chat
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: ensembleapp-chat.firebasestorage.app
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "1013406866116"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: 1:1013406866116:web:51d5ee4f6b00bce5f48791
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Firebase Admin SDK (server-side only)
+  # Uses Application Default Credentials (ADC) - automatically provided by Firebase App Hosting
+  - variable: FIREBASE_PROJECT_ID
+    value: ensembleapp-chat
+    availability:
+      - RUNTIME
