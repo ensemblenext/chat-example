@@ -5,6 +5,8 @@ import { Menu, Plus } from "lucide-react";
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import { ErrorBanner } from '@/components/ErrorBanner';
+import { fetchChatToken } from '@/lib/api-utils';
 
 type Thread = { id: string; title: string; summary?: string };
 
@@ -21,6 +23,7 @@ function MultiThreadAgentExample() {
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
@@ -60,21 +63,15 @@ function MultiThreadAgentExample() {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(tokenEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${firebaseToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const { token: newToken, error: fetchError } = await fetchChatToken(tokenEndpoint, firebaseToken);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch token');
+    if (fetchError) {
+      setError(fetchError);
+      throw new Error(fetchError);
     }
 
-    const data = await response.json();
-    const newToken = data.token;
     setToken(newToken);
+    setError(null);
     return newToken;
   };
 
@@ -178,6 +175,7 @@ function MultiThreadAgentExample() {
 
   return (
     <div className="h-screen bg-slate-50 overflow-hidden">
+      <ErrorBanner error={error} onDismiss={() => setError(null)} />
       <div className="relative mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-6 px-6 py-8 overflow-hidden">
         <header className="flex flex-col gap-2 flex-shrink-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">

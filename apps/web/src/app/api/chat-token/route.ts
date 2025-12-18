@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     if (!emailDomain || !allowedDomains.includes(emailDomain)) {
       return NextResponse.json(
-        { error: 'Access denied. Only @wellthy.com or @ensembleui.com email addresses are allowed.' },
+        { error: 'Access denied.' },
         { status: 403 }
       );
     }

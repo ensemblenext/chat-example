@@ -5,6 +5,8 @@ import { customChatWidgets } from '@/components/widgets/chat-widgets';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import { ErrorBanner } from '@/components/ErrorBanner';
+import { fetchChatToken } from '@/lib/api-utils';
 
 /**
  * Simple example of using the chat widget as a pop up
@@ -13,6 +15,7 @@ function AcmeExamplePage() {
   const { getIdToken } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [dataContext, setDataContext] = useState<EmbeddableChatWidgetConfig['dataContext']>({
     name: 'ACME Corp',
     location: '123 Main St, Springfield',
@@ -57,21 +60,15 @@ function AcmeExamplePage() {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(tokenEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${firebaseToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    const { token: newToken, error: fetchError } = await fetchChatToken(tokenEndpoint, firebaseToken);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch token');
+    if (fetchError) {
+      setError(fetchError);
+      throw new Error(fetchError);
     }
 
-    const data = await response.json();
-    const newToken = data.token;
     setToken(newToken);
+    setError(null);
     return newToken;
   };
 
@@ -198,6 +195,8 @@ function AcmeExamplePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <ErrorBanner error={error} onDismiss={() => setError(null)} />
+
       {/* Static Content Section */}
       <div className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
