@@ -110,6 +110,8 @@ function AcmeExamplePage() {
           // agentId: 'agent456',
           agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
           title: 'Support Agent',
+          introMessage: 'Hello! How can I assist you today?',
+          inputPlaceholder: 'Type your message here...',
           anchor: {
             enabled: true,
             initiallyOpen: false,
