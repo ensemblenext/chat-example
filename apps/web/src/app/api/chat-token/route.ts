@@ -34,6 +34,17 @@ export async function POST(request: NextRequest) {
     const email = decodedToken.email || '';
     const displayName = decodedToken.name || email.split('@')[0];
 
+    // Validate email domain - only allow @wellthy.com or @ensembleui.com
+    const allowedDomains = ['wellthy.com', 'ensembleui.com'];
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+
+    if (!emailDomain || !allowedDomains.includes(emailDomain)) {
+      return NextResponse.json(
+        { error: 'Access denied. Only @wellthy.com or @ensembleui.com email addresses are allowed.' },
+        { status: 403 }
+      );
+    }
+
     // Get Ensemble secrets
     const keyId = process.env.ENSEMBLE_KEY_ID;
     const keySecret = process.env.ENSEMBLE_KEY_SECRET;

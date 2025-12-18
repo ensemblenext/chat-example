@@ -32,6 +32,18 @@ env:
     availability:
       - BUILD
       - RUNTIME
+  
+  - variable: NEXT_PUBLIC_AGENT_ID
+    value: not_yet_set
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_AGENT_EXECUTION_ID
+    value: pHtrnEKoa0SzqyMgWAzC
+    availability:
+      - BUILD
+      - RUNTIME
 
   # Server-side secrets (NOT exposed to browser)
   # These reference Cloud Secret Manager secrets
