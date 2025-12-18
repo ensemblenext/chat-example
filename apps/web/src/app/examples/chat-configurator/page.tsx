@@ -1,7 +1,9 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { defaultChatWidgets } from '@ensembleapp/client-sdk';
+import type { EmbeddableChatWidgetConfig, UIWidgetDefinition } from '@ensembleapp/client-sdk';
 import Link from 'next/link';
+import { customChatWidgets } from '@/components/widgets/chat-widgets';
 
 type Mode = 'popup' | 'embedded';
 
@@ -32,7 +34,7 @@ type ConfigState = {
 export default function ChatConfiguratorExample() {
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'configuration' | 'styles'>('configuration');
+  const [activeTab, setActiveTab] = useState<'configuration' | 'styles' | 'widgets'>('configuration');
   const [configState, setConfigState] = useState<ConfigState>({
     mode: 'popup',
     title: '',
@@ -58,6 +60,27 @@ export default function ChatConfiguratorExample() {
   });
   const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const lastModeRef = useRef<Mode>('popup');
+  const widgetOptions: { id: string; label: string; widget: UIWidgetDefinition; badge?: string }[] =
+    useMemo(
+      () => [
+        ...defaultChatWidgets.map((w) => ({
+          id: `default-${w.widgetType}`,
+          label: w.widgetType,
+          widget: w,
+          badge: 'Built-in' as const,
+        })),
+        ...customChatWidgets.map((w) => ({
+          id: `custom-${w.widgetType}`,
+          label: w.widgetType,
+          widget: w,
+          badge: undefined,
+        })),
+      ],
+      [],
+    );
+  const [selectedWidgetIds, setSelectedWidgetIds] = useState<string[]>(() =>
+    widgetOptions.map((w) => w.id),
+  );
 
   const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT;
 
@@ -80,7 +103,7 @@ export default function ChatConfiguratorExample() {
       document.head.appendChild(script);
     });
 
-  const fetchToken = async (): Promise<string> => {
+  const fetchToken = useCallback(async (): Promise<string> => {
     if (!tokenEndpoint) {
       throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
     }
@@ -90,9 +113,9 @@ export default function ChatConfiguratorExample() {
     );
     setToken(newToken);
     return newToken;
-  };
+  }, [tokenEndpoint]);
 
-  const handleAuthError = async () => {
+  const handleAuthError = useCallback(async () => {
     try {
       const newToken = await fetchToken();
       if (!configRef.current) {
@@ -106,47 +129,55 @@ export default function ChatConfiguratorExample() {
     } catch (err) {
       console.error('Failed to refresh chat token', err);
     }
-  };
+  }, [fetchToken]);
 
-  const buildConfig = (currentToken: string): EmbeddableChatWidgetConfig => {
-    const isEmbedded = configState.mode === 'embedded';
-    const baseConfig: EmbeddableChatWidgetConfig = {
-      api: {
-        baseUrl: 'https://service.ensembleapp.ai',
-        token: currentToken,
-      },
-      threadId: configState.threadId,
-      agentExecutionId: configState.agentExecutionId,
-      title: configState.title,
-      introMessage: configState.introMessage,
-      inputPlaceholder: configState.inputPlaceholder,
-      styles: {
-        primaryColor: configState.primaryColor,
-        primaryTextColor: configState.primaryTextColor,
-        backgroundColor: configState.backgroundColor,
-        borderColor: configState.borderColor,
-        headerTextColor: configState.headerTextColor,
-        userBubbleTextColor: configState.userBubbleTextColor,
-        assistantBubbleBackground: configState.assistantBubbleBackground,
-        assistantBubbleTextColor: configState.assistantBubbleTextColor,
-        fontFamily: configState.fontFamily,
-        borderRadius: configState.borderRadius,
-        inputBackground: configState.inputBackground,
-        inputTextColor: configState.inputTextColor,
-        inputPlaceholderColor: configState.inputPlaceholderColor,
-        thoughtsBorderColor: configState.thoughtsBorderColor,
-      },
-      onAuthError: handleAuthError,
-      anchor: isEmbedded
-        ? { enabled: false }
-        : { enabled: true },
-      containerId: isEmbedded ? 'configurator-container' : undefined,
-      popupSize: {
-        width: '800px',
-      },
-    };
-    return baseConfig;
-  };
+  const buildConfig = useCallback(
+    (currentToken: string): EmbeddableChatWidgetConfig => {
+      const isEmbedded = configState.mode === 'embedded';
+      const baseConfig: EmbeddableChatWidgetConfig = {
+        api: {
+          baseUrl: 'https://service.ensembleapp.ai',
+          token: currentToken,
+        },
+        threadId: configState.threadId,
+        agentExecutionId: configState.agentExecutionId,
+        title: configState.title,
+        introMessage: configState.introMessage,
+        inputPlaceholder: configState.inputPlaceholder,
+        styles: {
+          primaryColor: configState.primaryColor,
+          primaryTextColor: configState.primaryTextColor,
+          backgroundColor: configState.backgroundColor,
+          borderColor: configState.borderColor,
+          headerTextColor: configState.headerTextColor,
+          userBubbleTextColor: configState.userBubbleTextColor,
+          assistantBubbleBackground: configState.assistantBubbleBackground,
+          assistantBubbleTextColor: configState.assistantBubbleTextColor,
+          fontFamily: configState.fontFamily,
+          borderRadius: configState.borderRadius,
+          inputBackground: configState.inputBackground,
+          inputTextColor: configState.inputTextColor,
+          inputPlaceholderColor: configState.inputPlaceholderColor,
+          thoughtsBorderColor: configState.thoughtsBorderColor,
+        },
+        onAuthError: handleAuthError,
+        anchor: isEmbedded ? { enabled: false } : { enabled: true },
+        containerId: isEmbedded ? 'configurator-container' : undefined,
+        popupSize: {
+          width: '800px',
+        },
+      };
+      const widgets = widgetOptions
+        .filter((w) => selectedWidgetIds.includes(w.id))
+        .map((w) => w.widget);
+
+      return {
+        ...baseConfig,
+        widgets,
+      };
+    },
+    [configState, handleAuthError, selectedWidgetIds, widgetOptions],
+  );
 
   const initChat = async () => {
     if (hasInitialized) return;
@@ -198,7 +229,7 @@ export default function ChatConfiguratorExample() {
     } catch (err) {
       console.warn('Failed to update widget config', err);
     }
-  }, [hasInitialized, configState.title, configState.threadId, configState.agentExecutionId, configState.introMessage, configState.inputPlaceholder, configState.primaryColor, configState.primaryTextColor, configState.backgroundColor, configState.borderColor, configState.headerTextColor, configState.userBubbleTextColor, configState.assistantBubbleBackground, configState.assistantBubbleTextColor, configState.fontFamily, configState.borderRadius, configState.inputBackground, configState.inputTextColor, configState.inputPlaceholderColor, configState.thoughtsBorderColor, buildConfig]);
+  }, [hasInitialized, configState.title, configState.threadId, configState.agentExecutionId, configState.introMessage, configState.inputPlaceholder, configState.primaryColor, configState.primaryTextColor, configState.backgroundColor, configState.borderColor, configState.headerTextColor, configState.userBubbleTextColor, configState.assistantBubbleBackground, configState.assistantBubbleTextColor, configState.fontFamily, configState.borderRadius, configState.inputBackground, configState.inputTextColor, configState.inputPlaceholderColor, configState.thoughtsBorderColor, selectedWidgetIds, buildConfig]);
 
   // Full reload only when switching modes (popup/embedded)
   useEffect(() => {
@@ -219,7 +250,7 @@ export default function ChatConfiguratorExample() {
             // window.ChatWidget.destroy();
             console.log('Widget destroyed successfully');
           } catch (err) {
-            console.warn('Destroy failed, forcing cleanup:', err?.message || err);
+            console.warn('Destroy failed, forcing cleanup:', err);
             // Force cleanup without calling destroy() to avoid DOM issues
             delete window.ChatWidget;
           }
@@ -558,7 +589,7 @@ export default function ChatConfiguratorExample() {
         </header>
 
         <div className="flex flex-col gap-6 lg:flex-row flex-1 min-h-0">
-          <div className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm lg:w-[280px] flex flex-col">
+          <div className="relative z-30 w-full overflow-visible rounded-2xl border border-slate-200 bg-white shadow-sm lg:w-[280px] flex flex-col">
             <div className="p-4 pb-0">
               <div className="flex rounded-lg bg-slate-100 p-1 mb-3">
                 <button
@@ -581,26 +612,78 @@ export default function ChatConfiguratorExample() {
                 >
                   Styles
                 </button>
+                <button
+                  onClick={() => setActiveTab('widgets')}
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${
+                    activeTab === 'widgets'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Widgets
+                </button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <div className="flex-1 overflow-y-auto overflow-x-visible px-4 pb-4">
               <div className="space-y-3">
-                {(activeTab === 'configuration' ? configurationRows : styleRows).map((row) => (
-                  <label key={row.label} className={`block text-sm ${
-                    activeTab === 'styles'
-                      ? 'flex items-center justify-between gap-2'
-                      : ''
-                  }`}>
-                    <span className={`text-slate-700 ${
-                      activeTab === 'styles' ? 'flex-1 min-w-0' : ''
+                {activeTab === 'widgets' ? (
+                  <div className="space-y-2">
+                    {widgetOptions.map((opt) => {
+                      const checked = selectedWidgetIds.includes(opt.id);
+                      const description =
+                        opt.widget?.schema?.description ??
+                        opt.widget?.schema?._def?.description;
+                      return (
+                        <label
+                          key={opt.id}
+                          className="flex items-center rounded-lg border border-slate-200 px-3 py-2 text-sm gap-2"
+                          title={description}
+                        >
+                          <span className="flex-1 min-w-0 text-slate-800">
+                            <div className="truncate">{opt.label}</div>
+                            <div className="text-xs text-slate-500 truncate min-h-[1.25rem]">
+                              {description ?? ''}
+                            </div>
+                          </span>
+                          {opt.badge ? (
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                              {opt.badge}
+                            </span>
+                          ) : null}
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4"
+                            checked={checked}
+                            onChange={(e) => {
+                              setSelectedWidgetIds((prev) =>
+                                e.target.checked
+                                  ? [...prev, opt.id]
+                                  : prev.filter((id) => id !== opt.id),
+                              );
+                            }}
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  (activeTab === 'configuration' ? configurationRows : styleRows).map((row) => (
+                    <label key={row.label} className={`block text-sm ${
+                      activeTab === 'styles'
+                        ? 'flex items-center justify-between gap-2'
+                        : ''
                     }`}>
-                      {row.label}
-                    </span>
-                    <div className={activeTab === 'styles' ? 'flex-shrink-0' : 'mt-1'}>
-                      {row.input}
-                    </div>
-                  </label>
-                ))}
+                      <span className={`text-slate-700 ${
+                        activeTab === 'styles' ? 'flex-1 min-w-0' : ''
+                      }`}>
+                        {row.label}
+                      </span>
+                      <div className={activeTab === 'styles' ? 'flex-shrink-0' : 'mt-1'}>
+                        {row.input}
+                      </div>
+                    </label>
+                  ))
+                )}
               </div>
             </div>
           </div>

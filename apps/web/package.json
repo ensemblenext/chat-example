@@ -17,7 +17,7 @@
     "dotenv": "^17.2.3"
   },
   "devDependencies": {
-    "@ensembleapp/client-sdk": "^0.0.4",
+    "@ensembleapp/client-sdk": "^0.0.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
