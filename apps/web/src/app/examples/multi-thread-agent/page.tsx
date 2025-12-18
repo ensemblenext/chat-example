@@ -3,6 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { Menu, Plus } from "lucide-react";
 import Link from 'next/link';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import { ErrorBanner } from '@/components/ErrorBanner';
+import { fetchChatToken } from '@/lib/api-utils';
 
 type Thread = { id: string; title: string; summary?: string };
 
@@ -12,12 +16,14 @@ const initialThreads: Thread[] = [
   { id: `demo-${Date.now()}-3`, title: 'Docs drafting', summary: 'Rewrite specs into concise docs.' },
 ];
 
-export default function MultiThreadAgentExample() {
+function MultiThreadAgentExample() {
+  const { getIdToken } = useAuth();
   const [threads, setThreads] = useState<Thread[]>(initialThreads);
   const [selectedThreadId, setSelectedThreadId] = useState<string>(initialThreads[0].id);
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
@@ -26,7 +32,7 @@ export default function MultiThreadAgentExample() {
     [threads, selectedThreadId],
   );
 
-  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT;
+  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
 
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
@@ -52,10 +58,20 @@ export default function MultiThreadAgentExample() {
       throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
     }
 
-    const newToken = await fetch(tokenEndpoint, { method: 'POST' }).then((r) =>
-      r.json().then((data) => data.token),
-    );
+    const firebaseToken = await getIdToken();
+    if (!firebaseToken) {
+      throw new Error('Not authenticated');
+    }
+
+    const { token: newToken, error: fetchError } = await fetchChatToken(tokenEndpoint, firebaseToken);
+
+    if (fetchError) {
+      setError(fetchError);
+      throw new Error(fetchError);
+    }
+
     setToken(newToken);
+    setError(null);
     return newToken;
   };
 
@@ -159,6 +175,7 @@ export default function MultiThreadAgentExample() {
 
   return (
     <div className="h-screen bg-slate-50 overflow-hidden">
+      <ErrorBanner error={error} onDismiss={() => setError(null)} />
       <div className="relative mx-auto flex h-full min-h-0 max-w-6xl flex-col gap-6 px-6 py-8 overflow-hidden">
         <header className="flex flex-col gap-2 flex-shrink-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -246,5 +263,13 @@ export default function MultiThreadAgentExample() {
         </section>
       </div>
     </div>
+  );
+}
+
+export default function MultiThreadAgentExampleWrapper() {
+  return (
+    <ProtectedRoute>
+      <MultiThreadAgentExample />
+    </ProtectedRoute>
   );
 }

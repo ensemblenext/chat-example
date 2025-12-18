@@ -4,6 +4,10 @@ import { defaultChatWidgets } from '@ensembleapp/client-sdk';
 import type { EmbeddableChatWidgetConfig, UIWidgetDefinition } from '@ensembleapp/client-sdk';
 import Link from 'next/link';
 import { customChatWidgets } from '@/components/widgets/chat-widgets';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import { ErrorBanner } from '@/components/ErrorBanner';
+import { fetchChatToken } from '@/lib/api-utils';
 
 type Mode = 'popup' | 'embedded';
 
@@ -31,10 +35,14 @@ type ConfigState = {
   thoughtsBorderColor: string;
 };
 
-export default function ChatConfiguratorExample() {
+
+function ChatConfiguratorExample() {
+  const { getIdToken } = useAuth();
+
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [activeTab, setActiveTab] = useState<'configuration' | 'styles' | 'widgets'>('configuration');
+  const [error, setError] = useState<string | null>(null);
   const [configState, setConfigState] = useState<ConfigState>({
     mode: 'popup',
     title: '',
@@ -82,7 +90,7 @@ export default function ChatConfiguratorExample() {
     widgetOptions.map((w) => w.id),
   );
 
-  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT;
+  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
 
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
@@ -108,10 +116,20 @@ export default function ChatConfiguratorExample() {
       throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
     }
 
-    const newToken = await fetch(tokenEndpoint, { method: 'POST' }).then((r) =>
-      r.json().then((data) => data.token),
-    );
+    const firebaseToken = await getIdToken();
+    if (!firebaseToken) {
+      throw new Error('Not authenticated');
+    }
+
+    const { token: newToken, error: fetchError } = await fetchChatToken(tokenEndpoint, firebaseToken);
+
+    if (fetchError) {
+      setError(fetchError);
+      throw new Error(fetchError);
+    }
+
     setToken(newToken);
+    setError(null);
     return newToken;
   }, [tokenEndpoint]);
 
@@ -250,7 +268,7 @@ export default function ChatConfiguratorExample() {
             // window.ChatWidget.destroy();
             console.log('Widget destroyed successfully');
           } catch (err) {
-            console.warn('Destroy failed, forcing cleanup:', err);
+            console.warn('Destroy failed, forcing cleanup:', err instanceof Error ? err.message : err);
             // Force cleanup without calling destroy() to avoid DOM issues
             delete window.ChatWidget;
           }
@@ -382,7 +400,7 @@ export default function ChatConfiguratorExample() {
               onChange={(e) => handleChange('introMessage', e.target.value)}
             />
             <p className="mt-1 text-xs text-slate-500">
-                applicable only for new conversations
+              applicable only for new conversations
             </p>
           </div>
         ),
@@ -575,6 +593,7 @@ export default function ChatConfiguratorExample() {
 
   return (
     <div className="h-screen bg-slate-50 overflow-hidden">
+      <ErrorBanner error={error} onDismiss={() => setError(null)} />
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 h-full">
         <header className="flex flex-col gap-2 flex-shrink-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -594,21 +613,19 @@ export default function ChatConfiguratorExample() {
               <div className="flex rounded-lg bg-slate-100 p-1 mb-3">
                 <button
                   onClick={() => setActiveTab('configuration')}
-                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${
-                    activeTab === 'configuration'
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${activeTab === 'configuration'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   Configuration
                 </button>
                 <button
                   onClick={() => setActiveTab('styles')}
-                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${
-                    activeTab === 'styles'
+                  className={`flex-1 px-3 py-2 text-xs font-semibold rounded-md transition-colors ${activeTab === 'styles'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   Styles
                 </button>
@@ -691,7 +708,7 @@ export default function ChatConfiguratorExample() {
           <div className="flex-1 rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col lg:min-h-0">
             {configState.mode === 'popup' && (
               <div className="flex items-center justify-between px-5 py-4 flex-shrink-0">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Live preview</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Live preview</p>
               </div>
             )}
             <div className="relative flex-1 flex overflow-hidden">
@@ -707,5 +724,13 @@ export default function ChatConfiguratorExample() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ChatConfiguratorExampleWrapper() {
+  return (
+    <ProtectedRoute>
+      <ChatConfiguratorExample />
+    </ProtectedRoute>
   );
 }

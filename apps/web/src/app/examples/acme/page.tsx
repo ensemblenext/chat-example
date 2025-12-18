@@ -3,13 +3,19 @@ import { useEffect, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { customChatWidgets } from '@/components/widgets/chat-widgets';
 import Link from 'next/link';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
+import { ErrorBanner } from '@/components/ErrorBanner';
+import { fetchChatToken } from '@/lib/api-utils';
 
 /**
  * Simple example of using the chat widget as a pop up
  */
-export default function AcmeExamplePage() {
+function AcmeExamplePage() {
+  const { getIdToken } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [dataContext, setDataContext] = useState<EmbeddableChatWidgetConfig['dataContext']>({
     name: 'ACME Corp',
     location: '123 Main St, Springfield',
@@ -22,7 +28,7 @@ export default function AcmeExamplePage() {
     }
   }, []);
 
-  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT;
+  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
 
   // load widget from URL
   const loadWidget = () =>
@@ -49,10 +55,20 @@ export default function AcmeExamplePage() {
       throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
     }
 
-    const newToken = await fetch(tokenEndpoint, { method: 'POST' }).then((r) =>
-      r.json().then((data) => data.token),
-    );
+    const firebaseToken = await getIdToken();
+    if (!firebaseToken) {
+      throw new Error('Not authenticated');
+    }
+
+    const { token: newToken, error: fetchError } = await fetchChatToken(tokenEndpoint, firebaseToken);
+
+    if (fetchError) {
+      setError(fetchError);
+      throw new Error(fetchError);
+    }
+
     setToken(newToken);
+    setError(null);
     return newToken;
   };
 
@@ -179,6 +195,8 @@ export default function AcmeExamplePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <ErrorBanner error={error} onDismiss={() => setError(null)} />
+
       {/* Static Content Section */}
       <div className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
@@ -251,5 +269,13 @@ export default function AcmeExamplePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AcmeExamplePageWrapper() {
+  return (
+    <ProtectedRoute>
+      <AcmeExamplePage />
+    </ProtectedRoute>
   );
 }
