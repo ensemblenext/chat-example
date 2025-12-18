@@ -115,6 +115,17 @@ export default function MultiThreadAgentExample() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // remove the chat widget on navigating away. Don't do this if you want the chat to persist across pages
+  useEffect(() => {
+    return () => {
+      try {
+        window.ChatWidget?.destroy?.();
+      } catch (err) {
+        console.error('Failed to destroy chat widget on unmount', err);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!configRef.current || !selectedThread) {
       return;

@@ -4,6 +4,9 @@ import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { customChatWidgets } from '@/components/widgets/chat-widgets';
 import Link from 'next/link';
 
+/**
+ * Simple example of using the chat widget as a pop up
+ */
 export default function AcmeExamplePage() {
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -144,6 +147,17 @@ export default function AcmeExamplePage() {
     void initChat();
     // We intentionally run init once on mount; dependencies would cause re-init churn
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // remove the chat widget on navigating away. Don't do this if you want the chat to persist across pages
+  useEffect(() => {
+    return () => {
+      try {
+        window.ChatWidget?.destroy?.();
+      } catch (err) {
+        console.error('Failed to destroy chat widget on unmount', err);
+      }
+    };
   }, []);
 
   useEffect(() => {

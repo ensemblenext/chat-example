@@ -169,6 +169,17 @@ export default function ChatConfiguratorExample() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // remove the chat widget on navigating away. Don't do this if you want the chat to persist across pages
+  useEffect(() => {
+    return () => {
+      try {
+        window.ChatWidget?.destroy?.();
+      } catch (err) {
+        console.error('Failed to destroy chat widget on unmount', err);
+      }
+    };
+  }, []);
+
   // Update config without full reload for non-structural changes
   useEffect(() => {
     if (!hasInitialized || !configRef.current) return;
