@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
-import { Menu, Plus } from "lucide-react";
+import { Menu, Plus, Pencil } from "lucide-react";
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,20 +9,19 @@ import { ErrorBanner } from '@/components/ErrorBanner';
 import { fetchChatToken } from '@/lib/api-utils';
 
 type Thread = { id: string; title: string; summary?: string };
-
-const initialThreads: Thread[] = [
-  { id: `demo-${Date.now()}-1`, title: 'Team standup summary', summary: 'Summarize daily notes into action items.' },
-  { id: `demo-${Date.now()}-2`, title: 'Bug triage helper', summary: 'Categorize and prioritize new issues.' },
-  { id: `demo-${Date.now()}-3`, title: 'Docs drafting', summary: 'Rewrite specs into concise docs.' },
-];
+const chatBaseUrl = process.env.NEXT_PUBLIC_CHAT_BASE_URL!;
 
 function MultiThreadAgentExample() {
   const { getIdToken } = useAuth();
-  const [threads, setThreads] = useState<Thread[]>(initialThreads);
-  const [selectedThreadId, setSelectedThreadId] = useState<string>(initialThreads[0].id);
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [selectedThreadId, setSelectedThreadId] = useState<string>('');
   const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [hoveredThreadId, setHoveredThreadId] = useState<string | null>(null);
+  const editingInputRef = useRef<HTMLInputElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
@@ -31,8 +30,10 @@ function MultiThreadAgentExample() {
     () => threads.find((t) => t.id === selectedThreadId) ?? threads[0],
     [threads, selectedThreadId],
   );
+  const selectedThreadTitle = selectedThread?.title ?? 'Select a conversation';
 
   const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
+  const threadsEndpoint = `${chatBaseUrl}/chat/threads`;
 
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
@@ -75,6 +76,67 @@ function MultiThreadAgentExample() {
     return newToken;
   };
 
+  const fetchThreads = async () => {
+    try {
+      const currentToken = token ?? (await fetchToken());
+      const response = await fetch(threadsEndpoint, {
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch threads (${response.status})`);
+      }
+      const data: { threads?: { id: string; name: string | null }[] } = await response.json();
+      const normalized: Thread[] =
+        data.threads?.map((t) => ({
+          id: t.id,
+          title: t.name ?? t.id,
+          summary: 'test',
+        })) ?? [];
+      setThreads(normalized);
+      if (normalized.length && !normalized.find((t) => t.id === selectedThreadId)) {
+        setSelectedThreadId(normalized[0].id);
+      }
+      setError(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch threads';
+      console.error('Failed to fetch threads', err);
+      setError(message);
+    }
+  };
+
+  const renameThread = async (threadId: string, nextName: string) => {
+    const trimmed = nextName.trim();
+    if (!trimmed) {
+      setEditingThreadId(null);
+      return;
+    }
+    try {
+      const currentToken = token ?? (await fetchToken());
+      const res = await fetch(`${threadsEndpoint}/${threadId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${currentToken}`,
+        },
+        body: JSON.stringify({ threadName: nextName }),
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to rename thread (${res.status})`);
+      }
+      setThreads((prev) =>
+        prev.map((t) => (t.id === threadId ? { ...t, title: nextName } : t)),
+      );
+      setEditingThreadId(null);
+      setError(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to rename thread';
+      console.error('Failed to rename thread', err);
+      setError(message);
+    }
+  };
+
   const handleAuthError = async () => {
     try {
       const newToken = await fetchToken();
@@ -103,7 +165,7 @@ function MultiThreadAgentExample() {
       if (!configRef.current) {
         configRef.current = {
           api: {
-            baseUrl: 'https://service.ensembleapp.ai',
+            baseUrl: chatBaseUrl,
             token: currentToken!,
           },
           threadId: selectedThread.id,
@@ -127,9 +189,23 @@ function MultiThreadAgentExample() {
   };
 
   useEffect(() => {
+    void fetchThreads();
     void initChat();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (editingThreadId && editingInputRef.current) {
+      editingInputRef.current.select();
+    }
+  }, [editingThreadId]);
+
+  useEffect(() => {
+    if (!hasInitialized && threads.length > 0) {
+      void initChat();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threads, hasInitialized]);
 
   // remove the chat widget on navigating away. Don't do this if you want the chat to persist across pages
   useEffect(() => {
@@ -161,7 +237,6 @@ function MultiThreadAgentExample() {
     const newThread: Thread = {
       id: `thread-${Date.now()}`,
       title: `New thread ${count}`,
-      summary: 'Fresh conversation ready to start.',
     };
     setThreads((prev) => [newThread, ...prev]);
     setSelectedThreadId(newThread.id);
@@ -225,31 +300,99 @@ function MultiThreadAgentExample() {
                 {threads.map((thread) => {
                   const isActive = thread.id === selectedThread?.id;
                   return (
-                    <button
+                    <div
                       key={thread.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedThreadId(thread.id);
-                        setIsSidebarOpen(false);
+                      className="relative"
+                      onMouseLeave={() => {
+                        if (editingThreadId === thread.id) return;
+                        setEditingThreadId(null);
+                        setHoveredThreadId(null);
                       }}
-                      className={`w-full rounded-lg border px-3 py-2 text-left transition ${
-                        isActive
-                          ? 'border-blue-500 bg-blue-50 text-blue-800'
-                          : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300'
-                      }`}
+                      onMouseEnter={() => setHoveredThreadId(thread.id)}
                     >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`w-[3px] rounded-full ${isActive ? 'bg-blue-600' : 'bg-transparent'} self-stretch`}
-                        />
-                        <div className="flex-1">
-                          <div className="text-sm font-semibold">{thread.title}</div>
-                          {thread.summary ? (
-                            <div className="mt-1 text-xs text-slate-600 line-clamp-1">{thread.summary}</div>
-                          ) : null}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (editingThreadId === thread.id) return;
+                          setSelectedThreadId(thread.id);
+                          setIsSidebarOpen(false);
+                          setEditingThreadId(null);
+                          setHoveredThreadId(null);
+                        }}
+                        className={`w-full rounded-lg border px-3 py-2 text-left transition ${
+                          isActive
+                            ? 'border-blue-500 bg-blue-50 text-blue-800'
+                            : 'border-slate-200 bg-white text-slate-800 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-[3px] rounded-full ${isActive ? 'bg-blue-600' : 'bg-transparent'} self-stretch`}
+                          />
+                          <div className="flex-1">
+                            {editingThreadId === thread.id ? (
+                              <>
+                                <input
+                                  ref={editingInputRef}
+                                  className="w-full bg-transparent p-0 text-sm font-semibold text-slate-900 outline-none border-none focus:ring-0"
+                                  value={editingTitle}
+                                  autoFocus
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => setEditingTitle(e.target.value)}
+                                  onKeyDown={async (e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      await renameThread(thread.id, editingTitle);
+                                    }
+                                    if (e.key === 'Escape') {
+                                      setEditingThreadId(null);
+                                    }
+                                  }}
+                                  onBlur={async (e) => {
+                                    const value = e.target.value.trim();
+                                    if (value && value !== thread.title) {
+                                      await renameThread(thread.id, value);
+                                    }
+                                    setEditingThreadId(null);
+                                  }}
+                                />
+                                {thread.summary ? (
+                                  <div className="mt-1 text-xs text-slate-600 line-clamp-1">{thread.summary}</div>
+                                ) : null}
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-sm font-semibold">{thread.title}</div>
+                                {thread.summary ? (
+                                  <div className="mt-1 text-xs text-slate-600 line-clamp-1">{thread.summary}</div>
+                                ) : null}
+                              </>
+                            )}
+                          </div>
                         </div>
+                      </button>
+                      <div
+                        className={`absolute inset-y-0 right-2 flex items-center transition-opacity ${
+                          hoveredThreadId === thread.id && isActive ? 'opacity-100' : 'opacity-0'
+                        }`}
+                      >
+                        {isActive ? (
+                          <button
+                            type="button"
+                            className="rounded-full p-1 text-slate-600 hover:bg-slate-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingThreadId(thread.id);
+                              setEditingTitle(thread.title);
+                              setHoveredThreadId(null);
+                            }}
+                            aria-label="Rename thread"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        ) : null}
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>

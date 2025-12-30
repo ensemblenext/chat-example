@@ -154,7 +154,7 @@ function ChatConfiguratorExample() {
       const isEmbedded = configState.mode === 'embedded';
       const baseConfig: EmbeddableChatWidgetConfig = {
         api: {
-          baseUrl: 'https://service.ensembleapp.ai',
+          baseUrl: process.env.NEXT_PUBLIC_CHAT_BASE_URL!,
           token: currentToken,
         },
         threadId: configState.threadId,

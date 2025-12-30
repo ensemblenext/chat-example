@@ -102,7 +102,7 @@ function AcmeExamplePage() {
       if (!configRef.current) {
         configRef.current = {
           api: {
-            baseUrl: 'https://service.ensembleapp.ai',
+            baseUrl: process.env.NEXT_PUBLIC_CHAT_BASE_URL!,
             token: currentToken!,
           },
           threadId: `demo-${Date.now()}`,

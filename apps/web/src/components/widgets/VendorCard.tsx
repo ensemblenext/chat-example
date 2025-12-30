@@ -15,6 +15,7 @@ export const vendorCardPropsSchema = z.object({
   review: z.string().optional().describe('A highlighted review from this vendor'),
   hours: z.string().optional(),
   highlights: z.array(z.string()).optional(),
+  darkMode: z.boolean().optional().describe('Use a dark theme for the card'),
 }).describe('Card showing information about a business, vendor, or service provider');
 export type VendorCardProps = z.infer<typeof vendorCardPropsSchema>;
 
@@ -30,12 +31,15 @@ export const VendorCard = ({
   email,
   website,
   review,
+  darkMode,
 }: VendorCardProps) => {
   const baseId = `vendor-card-${id}`;
   const reviewsPanelId = `${baseId}-reviews`;
   const highlightsPanelId = `${baseId}-highlights`;
   const reviewsButtonId = `${baseId}-btn-reviews`;
   const highlightsButtonId = `${baseId}-btn-highlights`;
+
+  const isDark = !!darkMode;
 
   const mapLink = address
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
@@ -62,18 +66,21 @@ export const VendorCard = ({
     const isOpen = !targetPanel.classList.contains("hidden");
     const nextOpen = !isOpen;
 
+    const activeClasses = isDark
+      ? ["border-emerald-500", "bg-emerald-900", "text-emerald-50"]
+      : ["border-emerald-500", "bg-emerald-50", "text-emerald-700"];
+    const inactiveClasses = isDark
+      ? ["border-slate-700", "bg-slate-800", "text-slate-100"]
+      : ["border-slate-200", "bg-white", "text-slate-700"];
+
     (["reviews", "highlights"] as const).forEach((key) => {
       const panel = panels[key];
       const btn = buttons[key];
       if (!panel || !btn) return;
       const shouldOpen = nextOpen && key === tab;
       panel.classList.toggle("hidden", !shouldOpen);
-      btn.classList.toggle("border-emerald-500", shouldOpen);
-      btn.classList.toggle("bg-emerald-50", shouldOpen);
-      btn.classList.toggle("text-emerald-700", shouldOpen);
-      btn.classList.toggle("border-slate-200", !shouldOpen);
-      btn.classList.toggle("bg-white", !shouldOpen);
-      btn.classList.toggle("text-slate-700", !shouldOpen);
+      activeClasses.forEach((cls) => btn.classList.toggle(cls, shouldOpen));
+      inactiveClasses.forEach((cls) => btn.classList.toggle(cls, !shouldOpen));
     });
   };
 
@@ -81,28 +88,46 @@ export const VendorCard = ({
     "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition";
 
   const panelBaseClasses =
-    "rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-sm text-slate-700";
+    isDark
+      ? "rounded-lg border border-slate-800 bg-slate-800/60 p-3 text-sm text-slate-100"
+      : "rounded-lg border border-slate-200 bg-slate-50/60 p-3 text-sm text-slate-700";
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm ring-1 ring-slate-200/60 transition hover:-translate-y-0.5 hover:shadow-md mt-2">
+    <div
+      className={`group relative mt-2 overflow-hidden rounded-2xl border shadow-sm ring-1 transition hover:-translate-y-0.5 hover:shadow-md ${
+        isDark
+          ? "border-slate-800 bg-slate-900 ring-slate-800/60"
+          : "border-slate-100 bg-white ring-slate-200/60"
+      }`}
+    >
       <div className="flex flex-col gap-4 p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-semibold text-slate-900">{name}</h3>
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
+              <h3 className={`text-base font-semibold ${isDark ? "text-slate-50" : "text-slate-900"}`}>
+                {name}
+              </h3>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  isDark ? "bg-slate-800 text-slate-100" : "bg-slate-50 text-slate-700"
+                }`}
+              >
                 <span className="text-amber-500">★</span>
                 <span>{typeof rating === "number" ? rating.toFixed(1) : "—"}</span>
                 {typeof reviewsCount === "number" ? (
-                  <span className="text-slate-400">({reviewsCount})</span>
+                  <span className={isDark ? "text-slate-400" : "text-slate-400"}>({reviewsCount})</span>
                 ) : null}
               </span>
             </div>
             {description ? (
-              <p className="mt-1 line-clamp-1 text-sm text-slate-600">{description}</p>
+              <p className={`mt-1 line-clamp-1 text-sm ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                {description}
+              </p>
             ) : null}
             {!description && address ? (
-              <p className="mt-1 line-clamp-1 text-sm text-slate-600">{address}</p>
+              <p className={`mt-1 line-clamp-1 text-sm ${isDark ? "text-slate-300" : "text-slate-600"}`}>
+                {address}
+              </p>
             ) : null}
           </div>
           {mapLink ? (
@@ -110,7 +135,9 @@ export const VendorCard = ({
               href={mapLink}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-lg text-slate-600 transition hover:bg-slate-100"
+              className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-lg transition ${
+                isDark ? "bg-slate-800 text-slate-200 hover:bg-slate-700" : "bg-slate-50 text-slate-600 hover:bg-slate-100"
+              }`}
               aria-label="Open location in maps"
             >
               <MapPin className="h-7 w-7" />
@@ -118,28 +145,34 @@ export const VendorCard = ({
           ) : null}
         </div>
 
-        <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+        <div className={`grid gap-3 text-sm sm:grid-cols-2 ${isDark ? "text-slate-200" : "text-slate-700"}`}>
           {email ? (
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">✉️</span>
-              <a className="truncate text-slate-700 hover:text-slate-900" href={`mailto:${email}`}>
+              <span className={isDark ? "text-slate-400" : "text-slate-400"}>✉️</span>
+              <a
+                className={`truncate ${isDark ? "text-slate-100 hover:text-white" : "text-slate-700 hover:text-slate-900"}`}
+                href={`mailto:${email}`}
+              >
                 {email}
               </a>
             </div>
           ) : null}
           {phone ? (
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">📞</span>
-              <a className="truncate text-slate-700 hover:text-slate-900" href={`tel:${phone}`}>
+              <span className={isDark ? "text-slate-400" : "text-slate-400"}>📞</span>
+              <a
+                className={`truncate ${isDark ? "text-slate-100 hover:text-white" : "text-slate-700 hover:text-slate-900"}`}
+                href={`tel:${phone}`}
+              >
                 {phone}
               </a>
             </div>
           ) : null}
           {website ? (
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">🔗</span>
+              <span className={isDark ? "text-slate-400" : "text-slate-400"}>🔗</span>
               <a
-                className="truncate text-slate-700 hover:text-slate-900"
+                className={`truncate ${isDark ? "text-slate-100 hover:text-white" : "text-slate-700 hover:text-slate-900"}`}
                 href={website}
                 target="_blank"
                 rel="noreferrer"
@@ -158,11 +191,17 @@ export const VendorCard = ({
                   id={reviewsButtonId}
                   type="button"
                   onClick={() => toggleTab("reviews")}
-                  className={`${tabBaseClasses} border-slate-200 bg-white text-slate-700`}
+                  className={`${tabBaseClasses} ${
+                    isDark ? "border-slate-700 bg-slate-800 text-slate-100" : "border-slate-200 bg-white text-slate-700"
+                  }`}
                 >
                   Reviews
                   {typeof reviewsCount === "number" ? (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                        isDark ? "bg-slate-700 text-slate-100" : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
                       {reviewsCount}
                     </span>
                   ) : null}
@@ -173,11 +212,17 @@ export const VendorCard = ({
                   id={highlightsButtonId}
                   type="button"
                   onClick={() => toggleTab("highlights")}
-                  className={`${tabBaseClasses} border-slate-200 bg-white text-slate-700`}
+                  className={`${tabBaseClasses} ${
+                    isDark ? "border-slate-700 bg-slate-800 text-slate-100" : "border-slate-200 bg-white text-slate-700"
+                  }`}
                 >
                   Highlights
                   {highlights?.length ? (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-700">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                        isDark ? "bg-slate-700 text-slate-100" : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
                       {highlights.length}
                     </span>
                   ) : null}
@@ -190,13 +235,13 @@ export const VendorCard = ({
                 id={reviewsPanelId}
                 className={`${panelBaseClasses} hidden`}
               >
-                <p className="font-semibold text-slate-900">
+                <p className={`font-semibold ${isDark ? "text-slate-50" : "text-slate-900"}`}>
                   Reviews {typeof reviewsCount === "number" ? `(${reviewsCount})` : ""}
                 </p>
                 {review ? (
-                  <p className="mt-2 italic text-slate-800">“{review}”</p>
+                  <p className={`mt-2 italic ${isDark ? "text-slate-100" : "text-slate-800"}`}>“{review}”</p>
                 ) : (
-                  <p className="mt-2 text-slate-700">
+                  <p className={`mt-2 ${isDark ? "text-slate-200" : "text-slate-700"}`}>
                     {typeof reviewsCount === "number" && reviewsCount > 0
                       ? "Reviews available."
                       : "No reviews yet."}
@@ -210,12 +255,12 @@ export const VendorCard = ({
                 id={highlightsPanelId}
                 className={`${panelBaseClasses} hidden`}
               >
-                <p className="font-semibold text-slate-900">Highlights</p>
+                <p className={`font-semibold ${isDark ? "text-slate-50" : "text-slate-900"}`}>Highlights</p>
                 <ul className="mt-2 space-y-1">
                   {highlights?.map((item, idx) => (
                     <li key={idx} className="flex items-start gap-2">
                       <span className="text-emerald-500">•</span>
-                      <span>{item}</span>
+                      <span className={isDark ? "text-slate-100" : "text-slate-800"}>{item}</span>
                     </li>
                   ))}
                 </ul>
