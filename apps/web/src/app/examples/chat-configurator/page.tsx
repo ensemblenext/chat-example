@@ -46,7 +46,7 @@ function ChatConfiguratorExample() {
   const [configState, setConfigState] = useState<ConfigState>({
     mode: 'popup',
     title: '',
-    threadId: `demo-${Date.now()}`,
+    threadId: `configurator-example`,
     agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
     introMessage: 'Hi there! How can I assist you today?',
     inputPlaceholder: 'Ask me anything…',

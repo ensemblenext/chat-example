@@ -105,7 +105,7 @@ function AcmeExamplePage() {
             baseUrl: process.env.NEXT_PUBLIC_CHAT_BASE_URL!,
             token: currentToken!,
           },
-          threadId: `acme`,
+          threadId: `acme-example`,
           // either agentId or agentExecutionId must be provided
           // agentId: 'agent456',
           agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
