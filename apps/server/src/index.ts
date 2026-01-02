@@ -8,8 +8,6 @@ const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
 dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 dotenv.config();
 
-const AUDIENCE = 'ensembleapp.ai';
-
 const app = express();
 const port = process.env.PORT || 4001;
 const keyId = process.env.ENSEMBLE_KEY_ID;
@@ -28,10 +26,10 @@ app.post('/chat-token', (req, res) => {
   const nowInSeconds = Math.floor(Date.now() / 1000);
 
   const token = jwt.sign({
-    sub: userId,
-    exp: nowInSeconds + 60 * 60, // 1 hour
+    sub: userId, // unique user ID
+    exp: nowInSeconds + 60 * 60, // 1-hour expiration
     iat: nowInSeconds,
-    aud: AUDIENCE,
+    aud: 'ensembleapp.ai',
   }, keySecret, {
     algorithm: 'HS256',
     keyid: keyId,
@@ -40,6 +38,6 @@ app.post('/chat-token', (req, res) => {
   res.json({ token });
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+// app.listen(port, () => {
+//   console.log(`Server running at http://localhost:${port}`);
+// });

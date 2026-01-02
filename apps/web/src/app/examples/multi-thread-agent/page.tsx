@@ -92,7 +92,7 @@ function MultiThreadAgentExample() {
         data.threads?.map((t) => ({
           id: t.id,
           title: t.name ?? t.id,
-          summary: 'test',
+          summary: undefined,
         })) ?? [];
       setThreads(normalized);
       if (normalized.length && !normalized.find((t) => t.id === selectedThreadId)) {

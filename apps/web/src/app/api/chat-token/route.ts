@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-import { adminAuth } from '@/lib/firebase/admin';
 
-const AUDIENCE = 'ensembleapp.ai';
+import { adminAuth } from '@/lib/firebase/admin';
+import { signToken } from './token-util';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,13 +31,12 @@ export async function POST(request: NextRequest) {
     // Extract user info from Firebase token
     const userId = decodedToken.uid;
     const email = decodedToken.email || '';
-    const displayName = decodedToken.name || email.split('@')[0];
 
-    // Validate email domain - only allow @wellthy.com or @ensembleui.com
-    const allowedDomains = ['wellthy.com', 'ensembleui.com'];
+    // enforce domain restrictions if configured
+    const allowedDomains = process.env.ALLOWED_DOMAINS;
     const emailDomain = email.split('@')[1]?.toLowerCase();
 
-    if (!emailDomain || !allowedDomains.includes(emailDomain)) {
+    if (!emailDomain || (allowedDomains && !allowedDomains.split(',').map(d => d.trim()).includes(emailDomain))) {
       return NextResponse.json(
         { error: 'Access denied.' },
         { status: 403 }
@@ -56,27 +54,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate Ensemble token with user info
-    const nowInSeconds = Math.floor(Date.now() / 1000);
-    const ensembleToken = jwt.sign(
-      {
-        sub: userId,
-        email: email,
-        name: displayName,
-        exp: nowInSeconds + 60 * 60, // 1 hour
-        iat: nowInSeconds,
-        aud: AUDIENCE,
+    // Generate Ensemble token with util
+    const jwtToken = signToken({
+      // unique user ID (conversation threads will be keyed by this ID)
+      userId,
+      // additional context to pass to the LLM
+      context: {
+
       },
-      keySecret,
-      {
-        algorithm: 'HS256',
-        keyid: keyId,
-      }
-    );
+      ensembleKeyId: keyId,
+      ensembleKeySecret: keySecret,
+    });
 
     return NextResponse.json({
-      token: ensembleToken,
-      user: { uid: userId, email, displayName }
+      token: jwtToken,
     });
 
   } catch (error) {

@@ -177,8 +177,8 @@ export class MapWidget extends React.Component<MapWidgetProps, MapWidgetState> {
 
   private getOverlayWidth(): number {
     const containerWidth = this.containerRef.current?.clientWidth ?? 1080;
-    // Target ~1/3 of the map, with sensible min/max.
-    return Math.max(320, Math.min(containerWidth * 0.33, 440));
+    // Target up to half of the map, with sensible min.
+    return Math.max(320, Math.min(containerWidth * 0.5, containerWidth * 0.5));
   }
 
   private getOverlayPadding(): google.maps.Padding {
@@ -241,7 +241,7 @@ export class MapWidget extends React.Component<MapWidgetProps, MapWidgetState> {
             </div>
           ) : null}
         </div>
-        <div className="pointer-events-none absolute inset-x-4 bottom-4 md:inset-y-6 md:right-6 md:left-auto md:w-1/3 md:min-w-[320px] md:max-w-[440px]">
+        <div className="pointer-events-none absolute inset-x-2 bottom-2 md:inset-y-3 md:right-3 md:left-auto md:w-1/2 md:min-w-[320px]">
           {selectedLocation ? (
             <div className="pointer-events-auto">
               <VendorCard {...this.toVendorProps(selectedLocation)!} />
