@@ -5,7 +5,6 @@ A demo monorepo showcasing the ChatWidget integration.
 ## Structure
 
 - `apps/web/` - Next.js web app with ChatWidget integration and built-in token API
-- `apps/server/` - (Deprecated) Express server - token generation now handled by Next.js API route
 
 ## Getting Started
 
@@ -54,39 +53,6 @@ This ensure the typeahead is scoped correctly to the widget version.
 - **API Route**: Next.js API route at `/api/chat-token` for JWT token generation
 - **ChatWidget**: Integrated chat component from `@ensembleapp/client-sdk`
 - **Multiple Examples**: ACME support chat, multi-thread agent, and interactive configurator
-
-## Migration from Express Server
-
-If you were using the separate Express server (`apps/server`), follow these steps to migrate:
-
-1. **Copy environment variables** from `apps/server/.env` to `apps/web/.env`:
-   ```bash
-   ENSEMBLE_KEY_ID=<your_value>
-   ENSEMBLE_KEY_SECRET=<your_value>
-   ```
-
-2. **Update token endpoint** in `apps/web/.env`:
-   ```bash
-   NEXT_PUBLIC_TOKEN_ENDPOINT=/api/chat-token
-   ```
-
-3. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-4. **Start the web app**:
-   ```bash
-   npm run dev
-   ```
-
-5. **Verify**: Open http://localhost:4000 and test the chat functionality
-
-### Rollback
-
-If you encounter issues, you can revert to the Express server by:
-1. Setting `NEXT_PUBLIC_TOKEN_ENDPOINT=http://localhost:4001/chat-token` in `apps/web/.env`
-2. Running the server separately: `cd apps/server && npm run dev`
 
 ## Deployment
 
