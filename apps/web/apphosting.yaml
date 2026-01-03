@@ -99,6 +99,7 @@ env:
   - variable: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     secret: GOOGLE_MAPS_API_KEY
     availability:
+      - BUILD
       - RUNTIME
 
   # Firebase Admin SDK (server-side only)
