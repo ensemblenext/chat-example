@@ -97,7 +97,7 @@ env:
       - RUNTIME
 
   - variable: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-    secret: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+    secret: GOOGLE_MAPS_API_KEY
     availability:
       - RUNTIME
 
