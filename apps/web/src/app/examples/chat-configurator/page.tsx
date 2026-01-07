@@ -15,7 +15,7 @@ type ConfigState = {
   mode: Mode;
   title: string;
   threadId: string;
-  agentExecutionId: string;
+  agentId: string;
   introMessage: string;
   inputPlaceholder: string;
   // Real ChatWidgetStyles properties
@@ -47,7 +47,7 @@ function ChatConfiguratorExample() {
     mode: 'popup',
     title: '',
     threadId: `configurator-example`,
-    agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
+    agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
     introMessage: 'Hi there! How can I assist you today?',
     inputPlaceholder: 'Ask me anything…',
     // Real ChatWidgetStyles properties
@@ -158,7 +158,7 @@ function ChatConfiguratorExample() {
           token: currentToken,
         },
         threadId: configState.threadId,
-        agentExecutionId: configState.agentExecutionId,
+        agentId: configState.agentId,
         title: configState.title,
         introMessage: configState.introMessage,
         inputPlaceholder: configState.inputPlaceholder,
@@ -247,7 +247,7 @@ function ChatConfiguratorExample() {
     } catch (err) {
       console.warn('Failed to update widget config', err);
     }
-  }, [hasInitialized, configState.title, configState.threadId, configState.agentExecutionId, configState.introMessage, configState.inputPlaceholder, configState.primaryColor, configState.primaryTextColor, configState.backgroundColor, configState.borderColor, configState.headerTextColor, configState.userBubbleTextColor, configState.assistantBubbleBackground, configState.assistantBubbleTextColor, configState.fontFamily, configState.borderRadius, configState.inputBackground, configState.inputTextColor, configState.inputPlaceholderColor, configState.thoughtsBorderColor, selectedWidgetIds, buildConfig]);
+  }, [hasInitialized, configState.title, configState.threadId, configState.agentId, configState.introMessage, configState.inputPlaceholder, configState.primaryColor, configState.primaryTextColor, configState.backgroundColor, configState.borderColor, configState.headerTextColor, configState.userBubbleTextColor, configState.assistantBubbleBackground, configState.assistantBubbleTextColor, configState.fontFamily, configState.borderRadius, configState.inputBackground, configState.inputTextColor, configState.inputPlaceholderColor, configState.thoughtsBorderColor, selectedWidgetIds, buildConfig]);
 
   // Full reload only when switching modes (popup/embedded)
   useEffect(() => {

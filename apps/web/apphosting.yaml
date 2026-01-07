@@ -39,7 +39,7 @@ env:
       - BUILD
       - RUNTIME
 
-  - variable: NEXT_PUBLIC_AGENT_EXECUTION_ID
+  - variable: NEXT_PUBLIC_AGENT_ID
     value: pHtrnEKoa0SzqyMgWAzC
     availability:
       - BUILD

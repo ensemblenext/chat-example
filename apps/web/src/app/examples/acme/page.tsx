@@ -106,9 +106,7 @@ function AcmeExamplePage() {
             token: currentToken!,
           },
           threadId: `acme-example`,
-          // either agentId or agentExecutionId must be provided
-          // agentId: 'agent456',
-          agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
+          agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
           title: 'Support Agent',
           introMessage: 'Hello! How can I assist you today?',
           inputPlaceholder: 'Type your message here...',

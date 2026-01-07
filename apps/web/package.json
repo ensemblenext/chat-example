@@ -21,8 +21,7 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
-    "@ensembleapp/client-sdk": "^0.0.5",
-    "@tailwindcss/oxide-linux-x64-gnu": "4.1.17",
+    "@ensembleapp/client-sdk": "^0.0.7",
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20",
@@ -33,5 +32,8 @@
     "lightningcss": "^1.30.2",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-linux-x64-gnu": "4.1.17"
   }
 }

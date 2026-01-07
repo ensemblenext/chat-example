@@ -169,7 +169,7 @@ function MultiThreadAgentExample() {
             token: currentToken!,
           },
           threadId: selectedThread.id,
-          agentExecutionId: process.env.NEXT_PUBLIC_AGENT_EXECUTION_ID ?? '',
+          agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
           onAuthError: handleAuthError,
           introMessage: 'Hello! How can I assist you today?',
           widgets: [],
