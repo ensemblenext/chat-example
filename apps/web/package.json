@@ -21,7 +21,7 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
-    "@ensembleapp/client-sdk": "^0.0.7",
+    "@ensembleapp/client-sdk": "^0.0.8",
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/node": "^20",

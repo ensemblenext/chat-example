@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const jwtToken = signToken({
       // unique user ID (conversation threads will be keyed by this ID)
       userId,
-      // additional context to pass to the LLM
+      // additional context to pass to the LLM. Must a key/value pairs
       context: {
 
       },
