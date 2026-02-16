@@ -6,11 +6,11 @@ export const customChatWidgets: UIWidgetDefinition[] = [
   {
     widgetType: "vendor-card",
     schema: vendorCardPropsSchema,
-    render: (payload) => <VendorCard {...payload as VendorCardProps} />,
+    render: ({payload}) => <VendorCard {...payload as VendorCardProps} />,
   },
   {
     widgetType: "map-widget",
     schema: mapWidgetPropsSchema,
-    render: (payload) => <MapWidget {...payload as MapWidgetProps} />,
+    render: ({payload}) => <MapWidget {...payload as MapWidgetProps} />,
   },
 ];
