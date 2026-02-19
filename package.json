@@ -15,5 +15,12 @@
   "devDependencies": {
     "turbo": "^2.6.1",
     "typescript": "^5.8.2"
+  },
+  "overrides": {
+    "zod": "3.25.76"
+  },
+  "dependencies": {
+    "@swc/helpers": "^0.5.18",
+    "styled-jsx": "^5.1.6"
   }
 }
