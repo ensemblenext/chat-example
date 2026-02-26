@@ -108,11 +108,12 @@ function AcmeExamplePage() {
           threadId: `acme-example`,
           agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
           title: 'Support Agent',
-          introMessage: 'Hello! How can I assist you today?',
+          initialUserMessage: 'Hello world',
+          initialAssistantMessage: 'Hello! How can I assist you today?',
           inputPlaceholder: 'Type your message here...',
           anchor: {
             enabled: true,
-            initiallyOpen: false,
+            initiallyOpen: true,
             render: ({ isOpen, toggle }) => (
               <button
                 type="button"
