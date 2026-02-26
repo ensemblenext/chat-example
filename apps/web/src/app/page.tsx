@@ -9,19 +9,25 @@ const examples = [
     slug: "acme",
     title: "ACME Support Chat",
     description: "Popup chat widget on a marketing landing page.",
-    badge: "Simple",
+    // badge: "Simple",
+  },
+  {
+    slug: "dashboard",
+    title: "Dashboard with Side Panel",
+    description: "Analytics dashboard with chat widget as a side panel (not popup).",
+    badge: "New",
   },
   {
     slug: "multi-thread-agent",
     title: "Multi-thread Agent",
     description: "Two-pane layout with thread list and embedded chat widget (no popup).",
-    badge: "Preview",
+    // badge: "Preview",
   },
   {
     slug: "chat-configurator",
     title: "Chat Configurator",
     description: "Interactive controls for EmbeddableChatWidgetConfig with live updates.",
-    badge: "Preview",
+    // badge: "Preview",
   },
 ];
 
