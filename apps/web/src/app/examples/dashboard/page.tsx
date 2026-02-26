@@ -91,7 +91,6 @@ function DashboardExamplePage() {
           agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
           initialUserMessage: 'Hello World',
           inputPlaceholder: 'Type your message here...',
-          anchor: { enabled: false },
           containerId: 'chat-container',
           onAuthError: handleAuthError,
           widgets: customChatWidgets,
@@ -147,7 +146,7 @@ function DashboardExamplePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
+    <div className="h-screen bg-slate-100 flex overflow-hidden">
       <ErrorBanner error={error} onDismiss={() => setError(null)} />
 
       {/* Main Dashboard Content */}
