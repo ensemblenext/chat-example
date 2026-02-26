@@ -160,7 +160,7 @@ function ChatConfiguratorExample() {
         threadId: configState.threadId,
         agentId: configState.agentId,
         title: configState.title,
-        introMessage: configState.introMessage,
+        initialAssistantMessage: configState.introMessage,
         inputPlaceholder: configState.inputPlaceholder,
         styles: {
           primaryColor: configState.primaryColor,

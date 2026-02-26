@@ -171,7 +171,7 @@ function MultiThreadAgentExample() {
           threadId: selectedThread.id,
           agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
           onAuthError: handleAuthError,
-          introMessage: 'Hello! How can I assist you today?',
+          initialAssistantMessage: 'Hello! How can I assist you today?',
           widgets: [],
           anchor: { enabled: false },
           containerId: 'chat-widget-container',
