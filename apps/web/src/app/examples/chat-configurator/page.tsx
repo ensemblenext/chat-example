@@ -1,13 +1,12 @@
 'use client';
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { defaultChatWidgets } from '@ensembleapp/client-sdk';
 import type { EmbeddableChatWidgetConfig, UIWidgetDefinition } from '@ensembleapp/client-sdk';
 import Link from 'next/link';
 import { customChatWidgets } from '@/components/widgets/chat-widgets';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { useAuth } from '@/contexts/AuthContext';
 import { ErrorBanner } from '@/components/ErrorBanner';
-import { fetchChatToken } from '@/lib/api-utils';
+import { useFetchToken } from '@/hooks/useFetchToken';
 
 type Mode = 'popup' | 'embedded';
 
@@ -37,12 +36,25 @@ type ConfigState = {
 
 
 function ChatConfiguratorExample() {
-  const { getIdToken } = useAuth();
-
-  const [token, setToken] = useState<string | null>(null);
-  const [hasInitialized, setHasInitialized] = useState(false);
-  const [activeTab, setActiveTab] = useState<'configuration' | 'styles' | 'widgets'>('configuration');
   const [error, setError] = useState<string | null>(null);
+  // NOTE: Replace useFetchToken with your own authentication flow
+  const { token, fetchToken } = useFetchToken(setError);
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  /**
+   * Re-fetch the token when 401 Unauthorized error.
+   * The widget will automatically retry the failed request once
+   */
+  const handleAuthError = async (): Promise<string | null> => {
+    try {
+      return await fetchToken();
+    } catch (err) {
+      console.error('Failed to refresh chat token', err);
+      return null;
+    }
+  };
+
+  const [activeTab, setActiveTab] = useState<'configuration' | 'styles' | 'widgets'>('configuration');
   const [configState, setConfigState] = useState<ConfigState>({
     mode: 'popup',
     title: '',
@@ -90,8 +102,6 @@ function ChatConfiguratorExample() {
     widgetOptions.map((w) => w.id),
   );
 
-  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
-
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
       const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
@@ -110,44 +120,6 @@ function ChatConfiguratorExample() {
       script.onerror = () => reject(new Error('Failed to load chat widget'));
       document.head.appendChild(script);
     });
-
-  const fetchToken = useCallback(async (): Promise<string> => {
-    if (!tokenEndpoint) {
-      throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
-    }
-
-    const firebaseToken = await getIdToken();
-    if (!firebaseToken) {
-      throw new Error('Not authenticated');
-    }
-
-    const { token: newToken, error: fetchError } = await fetchChatToken(tokenEndpoint, firebaseToken);
-
-    if (fetchError) {
-      setError(fetchError);
-      throw new Error(fetchError);
-    }
-
-    setToken(newToken);
-    setError(null);
-    return newToken;
-  }, [tokenEndpoint]);
-
-  const handleAuthError = useCallback(async () => {
-    try {
-      const newToken = await fetchToken();
-      if (!configRef.current) {
-        throw new Error('Chat widget config is not initialized.');
-      }
-      configRef.current.api.token = newToken;
-      window.ChatWidget?.updateConfig?.({
-        api: { ...configRef.current.api, token: newToken },
-      });
-      return newToken;
-    } catch (err) {
-      console.error('Failed to refresh chat token', err);
-    }
-  }, [fetchToken]);
 
   const buildConfig = useCallback(
     (currentToken: string): EmbeddableChatWidgetConfig => {

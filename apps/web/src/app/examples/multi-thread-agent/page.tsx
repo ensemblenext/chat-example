@@ -4,25 +4,38 @@ import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { Menu, Plus, Pencil } from "lucide-react";
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { useAuth } from '@/contexts/AuthContext';
 import { ErrorBanner } from '@/components/ErrorBanner';
-import { fetchChatToken } from '@/lib/api-utils';
+import { useFetchToken } from '@/hooks/useFetchToken';
 
 type Thread = { id: string; title: string; summary?: string };
 const chatBaseUrl = process.env.NEXT_PUBLIC_CHAT_BASE_URL!;
 
 function MultiThreadAgentExample() {
-  const { getIdToken } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  // NOTE: Replace useFetchToken with your own authentication flow
+  const { token, fetchToken } = useFetchToken(setError);
   const [threads, setThreads] = useState<Thread[]>([]);
+
+  /**
+   * Re-fetch the token when 401 Unauthorized error.
+   * The widget will automatically retry the failed request once
+   */
+  const handleAuthError = async (): Promise<string | null> => {
+    try {
+      return await fetchToken();
+    } catch (err) {
+      console.error('Failed to refresh chat token', err);
+      return null;
+    }
+  };
+
   const [selectedThreadId, setSelectedThreadId] = useState<string>('');
-  const [token, setToken] = useState<string | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [hoveredThreadId, setHoveredThreadId] = useState<string | null>(null);
   const editingInputRef = useRef<HTMLInputElement | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
@@ -32,7 +45,6 @@ function MultiThreadAgentExample() {
   );
   const selectedThreadTitle = selectedThread?.title ?? 'Select a conversation';
 
-  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
   const threadsEndpoint = `${chatBaseUrl}/chat/threads`;
 
   const loadWidget = () =>
@@ -53,28 +65,6 @@ function MultiThreadAgentExample() {
       script.onerror = () => reject(new Error('Failed to load chat widget'));
       document.head.appendChild(script);
     });
-
-  const fetchToken = async (): Promise<string> => {
-    if (!tokenEndpoint) {
-      throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
-    }
-
-    const firebaseToken = await getIdToken();
-    if (!firebaseToken) {
-      throw new Error('Not authenticated');
-    }
-
-    const { token: newToken, error: fetchError } = await fetchChatToken(tokenEndpoint, firebaseToken);
-
-    if (fetchError) {
-      setError(fetchError);
-      throw new Error(fetchError);
-    }
-
-    setToken(newToken);
-    setError(null);
-    return newToken;
-  };
 
   const fetchThreads = async () => {
     try {
@@ -134,22 +124,6 @@ function MultiThreadAgentExample() {
       const message = err instanceof Error ? err.message : 'Failed to rename thread';
       console.error('Failed to rename thread', err);
       setError(message);
-    }
-  };
-
-  const handleAuthError = async () => {
-    try {
-      const newToken = await fetchToken();
-      if (!configRef.current) {
-        throw new Error('Chat widget config is not initialized.');
-      }
-      configRef.current.api.token = newToken;
-      window.ChatWidget?.updateConfig?.({
-        api: { ...configRef.current.api, token: newToken },
-      });
-      return newToken;
-    } catch (err) {
-      console.error('Failed to refresh chat token', err);
     }
   };
 

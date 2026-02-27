@@ -1,202 +1,30 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
-import { customChatWidgets } from '@/components/widgets/chat-widgets';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { useAuth } from '@/contexts/AuthContext';
 import { ErrorBanner } from '@/components/ErrorBanner';
-import { fetchChatToken } from '@/lib/api-utils';
+import { ChatPopup, useChatPopup } from './ChatPopup';
 
 /**
  * Simple example of using the chat widget as a pop up
  */
 function AcmeExamplePage() {
-  const { getIdToken } = useAuth();
-  const [token, setToken] = useState<string | null>(null);
-  const [hasInitialized, setHasInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [dataContext, setDataContext] = useState<EmbeddableChatWidgetConfig['dataContext']>({
+  const [dataContext] = useState<EmbeddableChatWidgetConfig['dataContext']>({
     name: 'ACME Corp',
     location: '123 Main St, Springfield',
   });
-  const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
-
-  useEffect(() => {
-    if (window.chatWidgetConfig?.dataContext) {
-      setDataContext(window.chatWidgetConfig.dataContext);
-    }
-  }, []);
-
-  const tokenEndpoint = process.env.NEXT_PUBLIC_TOKEN_ENDPOINT || '/api/chat-token';
-
-  // load widget from URL
-  const loadWidget = () =>
-    new Promise<void>((resolve, reject) => {
-      const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
-      const widgetURL = `https://cdn.jsdelivr.net/npm/@ensembleapp/client-sdk@${sdkVersion}/dist/widget/widget.global.js`;
-
-      if (window.ChatWidget || document.querySelector(`script[src="${widgetURL}"]`)) {
-        resolve();
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.src = widgetURL;
-      script.async = true;
-      script.crossOrigin = 'anonymous';
-      script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load chat widget'));
-      document.head.appendChild(script);
-    });
-
-  const fetchToken = async (): Promise<string> => {
-    if (!tokenEndpoint) {
-      throw new Error('Token endpoint is not configured (set NEXT_PUBLIC_TOKEN_ENDPOINT).');
-    }
-
-    const firebaseToken = await getIdToken();
-    if (!firebaseToken) {
-      throw new Error('Not authenticated');
-    }
-
-    const { token: newToken, error: fetchError } = await fetchChatToken(tokenEndpoint, firebaseToken);
-
-    if (fetchError) {
-      setError(fetchError);
-      throw new Error(fetchError);
-    }
-
-    setToken(newToken);
-    setError(null);
-    return newToken;
-  };
-
-  const handleAuthError = async () => {
-    try {
-      const newToken = await fetchToken();
-      if (!configRef.current) {
-        throw new Error('Chat widget config is not initialized.');
-      }
-      configRef.current.api.token = newToken;
-      window.ChatWidget?.updateConfig?.({
-        api: { ...configRef.current.api, token: newToken },
-      });
-      return newToken;
-    } catch (err) {
-      console.error('Failed to refresh chat token', err);
-    }
-  };
-
-  // initialize chat widget
-  const initChat = async () => {
-    if (hasInitialized) {
-      return;
-    }
-
-    try {
-      await loadWidget();
-
-      const currentToken = token ?? (await fetchToken());
-
-      if (!configRef.current) {
-        configRef.current = {
-          api: {
-            baseUrl: process.env.NEXT_PUBLIC_CHAT_BASE_URL!,
-            token: currentToken!,
-          },
-          threadId: `acme-example`,
-          agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
-          title: 'Support Agent',
-          initialUserMessage: 'Hello world',
-          initialAssistantMessage: 'Hello! How can I assist you today?',
-          inputPlaceholder: 'Type your message here...',
-          anchor: {
-            enabled: true,
-            initiallyOpen: true,
-            render: ({ isOpen, toggle }) => (
-              <button
-                type="button"
-                onClick={toggle}
-                className="fixed bottom-6 right-6 w-16 h-16 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center"
-                aria-label={isOpen ? 'Close chat' : 'Open chat'}
-                aria-expanded={isOpen}
-              >
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
-                </svg>
-              </button>
-            ),
-          },
-          dataContext,
-          onAuthError: handleAuthError,
-          widgets: customChatWidgets,
-          // specify the container for the chat widget
-          // containerId is not needed for the popup version
-          containerId: undefined,
-          popupSize: {
-            width: '800px',
-          }
-        };
-      }
-
-      if (!hasInitialized && configRef.current) {
-        window.chatWidgetConfig = configRef.current;
-        await window.ChatWidget?.init?.(configRef.current);
-        setHasInitialized(true);
-      }
-    } catch (error) {
-      console.error('Failed to initialize chat widget', error);
-    }
-  };
-
-  useEffect(() => {
-    void initChat();
-    // We intentionally run init once on mount; dependencies would cause re-init churn
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // remove the chat widget on navigating away. Don't do this if you want the chat to persist across pages
-  useEffect(() => {
-    return () => {
-      try {
-        window.ChatWidget?.destroy?.();
-      } catch (err) {
-        console.error('Failed to destroy chat widget on unmount', err);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!configRef.current) {
-      return;
-    }
-
-    configRef.current.dataContext = dataContext;
-
-    if (hasInitialized) {
-      window.ChatWidget?.updateConfig?.({ dataContext });
-    }
-  }, [dataContext, hasInitialized]);
-
-  const showChat = async () => {
-    await initChat();
-    window.ChatWidget?.show?.();
-  };
+  const { show: showChat } = useChatPopup();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <ErrorBanner error={error} onDismiss={() => setError(null)} />
+      <ChatPopup
+        threadId="acme-example"
+        dataContext={dataContext}
+        onError={setError}
+      />
 
       {/* Static Content Section */}
       <div className="container mx-auto px-4 py-20">
