@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { defaultChatWidgets } from '@ensembleapp/client-sdk';
+import { defaultChatWidgets, getVendorCardsWidget } from '@ensembleapp/client-sdk';
 import type { EmbeddableChatWidgetConfig, UIWidgetDefinition } from '@ensembleapp/client-sdk';
 import Link from 'next/link';
 import { customChatWidgets } from '@/components/widgets/chat-widgets';
@@ -85,6 +85,12 @@ function ChatConfiguratorExample() {
       () => [
         ...defaultChatWidgets.map((w) => ({
           id: `default-${w.widgetType}`,
+          label: w.widgetType,
+          widget: w,
+          badge: 'Built-in' as const,
+        })),
+        ...(getVendorCardsWidget(false) || []).map((w) => ({
+          id: `vendor-${w.widgetType}`,
           label: w.widgetType,
           widget: w,
           badge: 'Built-in' as const,

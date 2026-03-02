@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { customChatWidgets } from '@/components/widgets/chat-widgets';
 import { useFetchToken } from '@/hooks/useFetchToken';
+import { getVendorCardsWidget } from '@ensembleapp/client-sdk';
 
 interface ChatPopupProps {
   threadId: string;
@@ -97,7 +98,10 @@ export function ChatPopup({ threadId, dataContext, onError }: ChatPopupProps) {
           },
           dataContext,
           onAuthError: handleAuthError,
-          widgets: customChatWidgets,
+          widgets: [
+            ...getVendorCardsWidget(false),
+            ...customChatWidgets,
+          ],
           containerId: undefined,
           popupSize: {
             width: '800px',
