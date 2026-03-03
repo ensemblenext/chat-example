@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -16,6 +16,16 @@ function AcmeExamplePage() {
     location: '123 Main St, Springfield',
   });
   const { show: showChat } = useChatPopup();
+
+  // listen for Vendor Card's add to list event
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const customEvent = e as CustomEvent<{ vendorId: string }>;
+      console.log('Vendor added to list:', customEvent.detail.vendorId);
+    };
+    window.addEventListener('vendor-selected', handler);
+    return () => window.removeEventListener('vendor-selected', handler);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">

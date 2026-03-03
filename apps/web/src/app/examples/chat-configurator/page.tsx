@@ -41,6 +41,16 @@ function ChatConfiguratorExample() {
   const { token, fetchToken } = useFetchToken(setError);
   const [hasInitialized, setHasInitialized] = useState(false);
 
+  // listen for Vendor Card's add to list event
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const customEvent = e as CustomEvent<{ vendorId: string }>;
+      console.log('Vendor added to list:', customEvent.detail.vendorId);
+    };
+    window.addEventListener('vendor-selected', handler);
+    return () => window.removeEventListener('vendor-selected', handler);
+  }, []);
+
   /**
    * Re-fetch the token when 401 Unauthorized error.
    * The widget will automatically retry the failed request once
