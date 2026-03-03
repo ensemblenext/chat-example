@@ -1,4 +1,4 @@
-import { UIWidgetDefinition } from "@ensembleapp/client-sdk";
+import type { UIWidgetDefinition } from "@ensembleapp/client-sdk";
 import { MapWidget, mapWidgetPropsSchema, MapWidgetProps } from "./MapWidget";
 
 export const customChatWidgets: UIWidgetDefinition[] = [
