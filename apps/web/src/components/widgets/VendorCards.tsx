@@ -193,6 +193,7 @@ export function VendorCards({ payload, enriched, onAddToList }: VendorCardsProps
                     border: 'none',
                     color: '#3b82f6',
                     fontSize: '0.875rem',
+                    fontWeight: 600,
                     cursor: 'pointer',
                     padding: 0,
                   }}

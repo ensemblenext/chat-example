@@ -37,6 +37,9 @@ export const customChatWidgets: UIWidgetDefinition[] = [
       <VendorCards
         payload={payload as VendorCardsPayload}
         enriched={enriched as VendorCardsEnriched}
+        onAddToList={(vendorId) => {
+          console.log(`Add vendor ${vendorId} to list`);
+        }}
       />
     ),
   }),
