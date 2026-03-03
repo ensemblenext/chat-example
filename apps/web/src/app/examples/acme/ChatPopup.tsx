@@ -98,10 +98,7 @@ export function ChatPopup({ threadId, dataContext, onError }: ChatPopupProps) {
           },
           dataContext,
           onAuthError: handleAuthError,
-          widgets: [
-            ...getVendorCardsWidget(false),
-            ...customChatWidgets,
-          ],
+          widgets: customChatWidgets,
           containerId: undefined,
           popupSize: {
             width: '800px',

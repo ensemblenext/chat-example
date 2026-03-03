@@ -89,12 +89,6 @@ function ChatConfiguratorExample() {
           widget: w,
           badge: 'Built-in' as const,
         })),
-        ...(getVendorCardsWidget(false) || []).map((w) => ({
-          id: `vendor-${w.widgetType}`,
-          label: w.widgetType,
-          widget: w,
-          badge: 'Built-in' as const,
-        })),
         ...customChatWidgets.map((w) => ({
           id: `custom-${w.widgetType}`,
           label: w.widgetType,
