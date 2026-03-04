@@ -1,34 +1,21 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { Menu, Plus, Pencil } from "lucide-react";
 import Link from 'next/link';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { useFetchToken } from '@/hooks/useFetchToken';
 
-type Thread = { id: string; title: string; summary?: string };
+const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
+const widgetURL = `https://cdn.jsdelivr.net/npm/@ensembleapp/client-sdk@${sdkVersion}/dist/widget/widget.global.js`;
 const chatBaseUrl = process.env.NEXT_PUBLIC_CHAT_BASE_URL!;
+
+type Thread = { id: string; title: string; summary?: string };
 
 function MultiThreadAgentExample() {
   const [error, setError] = useState<string | null>(null);
-  // NOTE: Replace useFetchToken with your own authentication flow
   const { token, fetchToken } = useFetchToken(setError);
   const [threads, setThreads] = useState<Thread[]>([]);
-
-  /**
-   * Re-fetch the token when 401 Unauthorized error.
-   * The widget will automatically retry the failed request once
-   */
-  const handleAuthError = async (): Promise<string | null> => {
-    try {
-      return await fetchToken();
-    } catch (err) {
-      console.error('Failed to refresh chat token', err);
-      return null;
-    }
-  };
-
   const [selectedThreadId, setSelectedThreadId] = useState<string>('');
   const [hasInitialized, setHasInitialized] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -36,7 +23,6 @@ function MultiThreadAgentExample() {
   const [editingTitle, setEditingTitle] = useState('');
   const [hoveredThreadId, setHoveredThreadId] = useState<string | null>(null);
   const editingInputRef = useRef<HTMLInputElement | null>(null);
-  const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const sidebarRef = useRef<HTMLDivElement | null>(null);
 
   const selectedThread = useMemo(
@@ -49,18 +35,13 @@ function MultiThreadAgentExample() {
 
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
-      const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
-      const widgetURL = `https://cdn.jsdelivr.net/npm/@ensembleapp/client-sdk@${sdkVersion}/dist/widget/widget.global.js`;
-
-      if (window.ChatWidget || document.querySelector(`script[src="${widgetURL}"]`)) {
+      if (window.ChatWidget) {
         resolve();
         return;
       }
 
       const script = document.createElement('script');
       script.src = widgetURL;
-      script.async = true;
-      script.crossOrigin = 'anonymous';
       script.onload = () => resolve();
       script.onerror = () => reject(new Error('Failed to load chat widget'));
       document.head.appendChild(script);
@@ -127,47 +108,6 @@ function MultiThreadAgentExample() {
     }
   };
 
-  const initChat = async () => {
-    if (hasInitialized) return;
-
-    try {
-      await loadWidget();
-
-      const currentToken = token ?? (await fetchToken());
-      if (!selectedThread) return;
-
-      if (!configRef.current) {
-        configRef.current = {
-          api: {
-            baseUrl: chatBaseUrl,
-            token: currentToken!,
-          },
-          threadId: selectedThread.id,
-          agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
-          onAuthError: handleAuthError,
-          initialAssistantMessage: 'Hello! How can I assist you today?',
-          widgets: [],
-          anchor: { enabled: false },
-          containerId: 'chat-widget-container',
-        };
-      }
-
-      if (!hasInitialized && configRef.current) {
-        window.chatWidgetConfig = configRef.current;
-        await window.ChatWidget?.init?.(configRef.current);
-        setHasInitialized(true);
-      }
-    } catch (error) {
-      console.error('Failed to initialize chat widget', error);
-    }
-  };
-
-  useEffect(() => {
-    void fetchThreads();
-    void initChat();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   useEffect(() => {
     if (editingThreadId && editingInputRef.current) {
       editingInputRef.current.select();
@@ -175,35 +115,43 @@ function MultiThreadAgentExample() {
   }, [editingThreadId]);
 
   useEffect(() => {
-    if (!hasInitialized && threads.length > 0) {
-      void initChat();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threads, hasInitialized]);
-
-  // remove the chat widget on navigating away. Don't do this if you want the chat to persist across pages
-  useEffect(() => {
-    return () => {
-      try {
-        window.ChatWidget?.destroy?.();
-      } catch (err) {
-        console.error('Failed to destroy chat widget on unmount', err);
-      }
-    };
+    fetchThreads();
   }, []);
 
   useEffect(() => {
-    if (!configRef.current || !selectedThread) {
-      return;
-    }
+    if (hasInitialized || !selectedThread) return;
 
-    configRef.current.threadId = selectedThread.id;
+    const init = async () => {
+      await loadWidget();
+      const currentToken = token ?? (await fetchToken());
 
-    if (hasInitialized) {
-      window.ChatWidget?.updateConfig?.({
+      await window.ChatWidget!.init({
+        api: {
+          baseUrl: chatBaseUrl,
+          token: currentToken!,
+        },
         threadId: selectedThread.id,
+        agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
+        onAuthError: fetchToken,
+        initialAssistantMessage: 'Hello! How can I assist you today?',
+        widgets: [],
+        anchor: { enabled: false },
+        containerId: 'chat-widget-container',
       });
-    }
+
+      setHasInitialized(true);
+    };
+
+    init();
+
+    return () => {
+      window.ChatWidget?.destroy();
+    };
+  }, [selectedThread, hasInitialized]);
+
+  useEffect(() => {
+    if (!hasInitialized || !selectedThread) return;
+    window.ChatWidget?.updateConfig?.({ threadId: selectedThread.id });
   }, [selectedThread, hasInitialized]);
 
   const addThread = () => {

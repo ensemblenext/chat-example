@@ -8,10 +8,16 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { ErrorBanner } from '@/components/ErrorBanner';
 import { useFetchToken } from '@/hooks/useFetchToken';
 
+const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
+const widgetURL = `https://cdn.jsdelivr.net/npm/@ensembleapp/client-sdk@${sdkVersion}/dist/widget/widget.global.js`;
+
 type Mode = 'popup' | 'embedded';
+
+type DisplayMode = 'brief' | 'full';
 
 type ConfigState = {
   mode: Mode;
+  displayMode: DisplayMode;
   title: string;
   threadId: string;
   agentId: string;
@@ -37,36 +43,12 @@ type ConfigState = {
 
 function ChatConfiguratorExample() {
   const [error, setError] = useState<string | null>(null);
-  // NOTE: Replace useFetchToken with your own authentication flow
   const { token, fetchToken } = useFetchToken(setError);
   const [hasInitialized, setHasInitialized] = useState(false);
-
-  // listen for Vendor Card's add to list event
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const customEvent = e as CustomEvent<{ vendorId: string }>;
-      console.log('Vendor added to list:', customEvent.detail.vendorId);
-    };
-    window.addEventListener('vendor-selected', handler);
-    return () => window.removeEventListener('vendor-selected', handler);
-  }, []);
-
-  /**
-   * Re-fetch the token when 401 Unauthorized error.
-   * The widget will automatically retry the failed request once
-   */
-  const handleAuthError = async (): Promise<string | null> => {
-    try {
-      return await fetchToken();
-    } catch (err) {
-      console.error('Failed to refresh chat token', err);
-      return null;
-    }
-  };
-
   const [activeTab, setActiveTab] = useState<'configuration' | 'styles' | 'widgets'>('configuration');
   const [configState, setConfigState] = useState<ConfigState>({
     mode: 'popup',
+    displayMode: 'brief',
     title: '',
     threadId: `configurator-example`,
     agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
@@ -90,6 +72,8 @@ function ChatConfiguratorExample() {
   });
   const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const lastModeRef = useRef<Mode>('popup');
+  const [vendorCardsWidget, setVendorCardsWidget] = useState<UIWidgetDefinition | null>(null);
+
   const widgetOptions: { id: string; label: string; widget: UIWidgetDefinition; badge?: string }[] =
     useMemo(
       () => [
@@ -105,28 +89,37 @@ function ChatConfiguratorExample() {
           widget: w,
           badge: undefined,
         })),
+        ...(vendorCardsWidget ? [{
+          id: 'vendor-cards',
+          label: 'vendor-cards',
+          widget: vendorCardsWidget,
+          badge: 'Built-in' as const,
+        }] : []),
       ],
-      [],
+      [vendorCardsWidget],
     );
-  const [selectedWidgetIds, setSelectedWidgetIds] = useState<string[]>(() =>
-    widgetOptions.map((w) => w.id),
-  );
+  const [selectedWidgetIds, setSelectedWidgetIds] = useState<string[]>(() => [
+    ...defaultChatWidgets.map((w) => `default-${w.widgetType}`),
+    ...customChatWidgets.map((w) => `custom-${w.widgetType}`),
+    'vendor-cards',
+  ]);
 
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
-      const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
-      const widgetURL = `https://cdn.jsdelivr.net/npm/@ensembleapp/client-sdk@${sdkVersion}/dist/widget/widget.global.js`;
-
-      if (window.ChatWidget || document.querySelector(`script[src="${widgetURL}"]`)) {
+      if (window.ChatWidget) {
+        const widgets = window.ChatWidget.getVendorCardsWidget(false);
+        if (widgets.length > 0) setVendorCardsWidget(widgets[0]);
         resolve();
         return;
       }
 
       const script = document.createElement('script');
       script.src = widgetURL;
-      script.async = true;
-      script.crossOrigin = 'anonymous';
-      script.onload = () => resolve();
+      script.onload = () => {
+        const widgets = window.ChatWidget?.getVendorCardsWidget(false);
+        if (widgets && widgets.length > 0) setVendorCardsWidget(widgets[0]);
+        resolve();
+      };
       script.onerror = () => reject(new Error('Failed to load chat widget'));
       document.head.appendChild(script);
     });
@@ -160,9 +153,10 @@ function ChatConfiguratorExample() {
           inputPlaceholderColor: configState.inputPlaceholderColor,
           thoughtsBorderColor: configState.thoughtsBorderColor,
         },
-        onAuthError: handleAuthError,
+        onAuthError: fetchToken,
         anchor: isEmbedded ? { enabled: false } : { enabled: true },
         containerId: isEmbedded ? 'configurator-container' : undefined,
+        displayMode: configState.displayMode,
         popupSize: {
           width: '800px',
         },
@@ -176,7 +170,7 @@ function ChatConfiguratorExample() {
         widgets,
       };
     },
-    [configState, handleAuthError, selectedWidgetIds, widgetOptions],
+    [configState, fetchToken, selectedWidgetIds, widgetOptions],
   );
 
   const initChat = async () => {
@@ -229,7 +223,7 @@ function ChatConfiguratorExample() {
     } catch (err) {
       console.warn('Failed to update widget config', err);
     }
-  }, [hasInitialized, configState.title, configState.threadId, configState.agentId, configState.introMessage, configState.inputPlaceholder, configState.primaryColor, configState.primaryTextColor, configState.backgroundColor, configState.borderColor, configState.headerTextColor, configState.userBubbleTextColor, configState.assistantBubbleBackground, configState.assistantBubbleTextColor, configState.fontFamily, configState.borderRadius, configState.inputBackground, configState.inputTextColor, configState.inputPlaceholderColor, configState.thoughtsBorderColor, selectedWidgetIds, buildConfig]);
+  }, [hasInitialized, configState.title, configState.threadId, configState.agentId, configState.introMessage, configState.inputPlaceholder, configState.displayMode, configState.primaryColor, configState.primaryTextColor, configState.backgroundColor, configState.borderColor, configState.headerTextColor, configState.userBubbleTextColor, configState.assistantBubbleBackground, configState.assistantBubbleTextColor, configState.fontFamily, configState.borderRadius, configState.inputBackground, configState.inputTextColor, configState.inputPlaceholderColor, configState.thoughtsBorderColor, selectedWidgetIds, buildConfig]);
 
   // Full reload only when switching modes (popup/embedded)
   useEffect(() => {
@@ -359,6 +353,19 @@ function ChatConfiguratorExample() {
               </p>
             )}
           </div>
+        ),
+      },
+      {
+        label: 'Display Mode',
+        input: (
+          <select
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
+            value={configState.displayMode}
+            onChange={(e) => handleChange('displayMode', e.target.value as DisplayMode)}
+          >
+            <option value="brief">Brief</option>
+            <option value="full">Full</option>
+          </select>
         ),
       },
       {

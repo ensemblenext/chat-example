@@ -1,8 +1,9 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-import type { EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
-import { customChatWidgets } from '@/components/widgets/chat-widgets';
+import { useEffect, useState } from 'react';
 import { useFetchToken } from '@/hooks/useFetchToken';
+
+const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
+const widgetURL = `https://cdn.jsdelivr.net/npm/@ensembleapp/client-sdk@${sdkVersion}/dist/widget/widget.global.js`;
 
 interface ChatPanelProps {
   threadId: string;
@@ -12,87 +13,52 @@ interface ChatPanelProps {
 const CONTAINER_ID = 'chat-container';
 
 export function ChatPanel({ threadId, onError }: ChatPanelProps) {
-  // NOTE: Replace useFetchToken with your own authentication flow
   const { token, fetchToken } = useFetchToken((err) => onError?.(err));
-
   const [hasInitialized, setHasInitialized] = useState(false);
-  const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
-
-  /**
-   * Re-fetch the token when 401 Unauthorized error.
-   * The widget will automatically retry the failed request once
-   */
-  const handleAuthError = async (): Promise<string | null> => {
-    try {
-      return await fetchToken();
-    } catch (err) {
-      console.error('Failed to refresh chat token', err);
-      return null;
-    }
-  };
 
   const loadWidget = () =>
     new Promise<void>((resolve, reject) => {
-      const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
-      const widgetURL = `https://cdn.jsdelivr.net/npm/@ensembleapp/client-sdk@${sdkVersion}/dist/widget/widget.global.js`;
-
-      if (window.ChatWidget || document.querySelector(`script[src="${widgetURL}"]`)) {
+      if (window.ChatWidget) {
         resolve();
         return;
       }
 
       const script = document.createElement('script');
       script.src = widgetURL;
-      script.async = true;
-      script.crossOrigin = 'anonymous';
       script.onload = () => resolve();
       script.onerror = () => reject(new Error('Failed to load chat widget'));
       document.head.appendChild(script);
     });
 
-  const initChat = async () => {
+  useEffect(() => {
     if (hasInitialized) return;
 
-    try {
+    const init = async () => {
       await loadWidget();
       const currentToken = token ?? (await fetchToken());
 
-      if (!configRef.current) {
-        configRef.current = {
-          api: {
-            baseUrl: process.env.NEXT_PUBLIC_CHAT_BASE_URL!,
-            token: currentToken!,
-          },
-          threadId,
-          agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
-          initialUserMessage: 'Hello World',
-          inputPlaceholder: 'Type your message here...',
-          containerId: CONTAINER_ID,
-          onAuthError: handleAuthError,
-          widgets: customChatWidgets,
-        };
-      }
+      await window.ChatWidget!.init({
+        api: {
+          baseUrl: process.env.NEXT_PUBLIC_CHAT_BASE_URL!,
+          token: currentToken!,
+        },
+        threadId,
+        agentId: process.env.NEXT_PUBLIC_AGENT_ID ?? '',
+        initialUserMessage: 'Hello World',
+        inputPlaceholder: 'Type your message here...',
+        containerId: CONTAINER_ID,
+        onAuthError: fetchToken,
+        widgets: window.ChatWidget!.getVendorCardsWidget(false),
+      });
 
-      if (!hasInitialized && configRef.current) {
-        window.chatWidgetConfig = configRef.current;
-        await window.ChatWidget?.init?.(configRef.current);
-        setHasInitialized(true);
-      }
-    } catch (error) {
-      console.error('Failed to initialize chat widget', error);
-    }
-  };
-
-  useEffect(() => {
-    void initChat();
-    return () => {
-      try {
-        window.ChatWidget?.destroy?.();
-      } catch (err) {
-        console.error('Failed to destroy chat widget on unmount', err);
-      }
+      setHasInitialized(true);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    init();
+
+    return () => {
+      window.ChatWidget?.destroy();
+    };
   }, []);
 
   return <div id={CONTAINER_ID} className="flex-1 overflow-hidden" />;
