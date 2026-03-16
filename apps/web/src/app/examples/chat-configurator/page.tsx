@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { defaultChatWidgets, getVendorCardsWidget } from '@ensembleapp/client-sdk';
-import type { EmbeddableChatWidgetConfig, UIWidgetDefinition } from '@ensembleapp/client-sdk';
+import type { EmbeddableChatWidgetConfig, AnyUIWidgetDefinition } from '@ensembleapp/client-sdk';
 import Link from 'next/link';
 import { customChatWidgets } from '@/components/widgets/chat-widgets';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
@@ -72,9 +72,9 @@ function ChatConfiguratorExample() {
   });
   const configRef = useRef<EmbeddableChatWidgetConfig | null>(null);
   const lastModeRef = useRef<Mode>('popup');
-  const [vendorCardsWidget, setVendorCardsWidget] = useState<UIWidgetDefinition | null>(null);
+  const [vendorCardsWidget, setVendorCardsWidget] = useState<AnyUIWidgetDefinition | null>(null);
 
-  const widgetOptions: { id: string; label: string; widget: UIWidgetDefinition; badge?: string }[] =
+  const widgetOptions: { id: string; label: string; widget: AnyUIWidgetDefinition; badge?: string }[] =
     useMemo(
       () => [
         ...defaultChatWidgets.map((w) => ({
@@ -636,9 +636,8 @@ function ChatConfiguratorExample() {
                   <div className="space-y-2">
                     {widgetOptions.map((opt) => {
                       const checked = selectedWidgetIds.includes(opt.id);
-                      const description =
-                        opt.widget?.schema?.description ??
-                        opt.widget?.schema?._def?.description;
+                      const schema = opt.widget?.schema as { description?: string; _def?: { description?: string } } | undefined;
+                      const description = schema?.description ?? schema?._def?.description;
                       return (
                         <label
                           key={opt.id}
