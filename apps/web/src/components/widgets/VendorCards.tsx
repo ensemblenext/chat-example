@@ -8,16 +8,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * - Client-side: distanceMatrix (progressive loading after cards render)
  */
 export const vendorCardsSchema = z.object({
-  fromLocation: z.string().describe('The location the user is searching from'),
+  fromLocation: z.string().describe("User's location - brief, informational e.g. 'Springfield'"),
   fromCoordinates: z.object({
     latitude: z.number(),
     longitude: z.number(),
   }).describe("The user's lat/lng coordinates from geocoding"),
   vendors: z.array(z.object({
     vendor_id: z.string(),
-    notes: z.string().optional().describe('7-10 words on why this vendor was recommended. Be brief and concise - do not include unecessary details such as vendor names.'),
+    notes: z.string().optional().describe('5-7 words on why this vendor was recommended. Do NOT repeat the vendor name or unnecessary details. Be brief and concise.'),
   })),
-}).describe('Display vendor cards. Only vendor IDs needed - details enriched server-side, distances fetched client-side.');
+}).describe('Generate vendor cards widget. Only the vendor_id and short notes are needed per vendor; the rest of the details will be fetched separately.');
 
 export type VendorCardsPayload = z.infer<typeof vendorCardsSchema>;
 
