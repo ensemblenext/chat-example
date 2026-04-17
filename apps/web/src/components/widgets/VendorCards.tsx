@@ -1,62 +1,25 @@
-import { createWidget } from "@ensembleapp/client-sdk";
+import { type InvokeTool, type MessageContext } from "@ensembleapp/client-sdk";
 import z from "zod";
-import ReactDOM from 'react-dom/client';
+import { useEffect, useMemo, useRef, useState } from "react";
 
+/**
+ * Hybrid schema: LLM outputs vendor IDs, server enriches details, client fetches distance.
+ * - Server-side: vendorDetails (runs parallel to LLM, no added latency)
+ * - Client-side: distanceMatrix (progressive loading after cards render)
+ */
 export const vendorCardsSchema = z.object({
-  fromLocation: z.string().describe('The location the user is searching for'),
+  fromLocation: z.string().describe('The location the user is searching from'),
   fromCoordinates: z.object({
     latitude: z.number(),
     longitude: z.number(),
-  }).describe("The location's lat/lng coordinates. This must come from the previous geocoding tool as-is - do NOT guess"),
+  }).describe("The user's lat/lng coordinates from geocoding"),
   vendors: z.array(z.object({
     vendor_id: z.string(),
-    notes: z.string().optional().describe('Why this vendor was recommended'),
-    vendorCoordinates: z.object({
-      latitude: z.number(),
-      longitude: z.number(),
-    }).describe("The lat/lng coordinates of this vendor. This must come from the vendor's location.coordinates from the previous vendor search tool - do NOT guess"),
+    notes: z.string().optional().describe('7-10 words on why this vendor was recommended. Be brief and concise - do not include unecessary details such as vendor names.'),
   })),
-}).describe('displaying a list of vendor cards. Use this widget to represent data from CareNetwork vendor search tool.');
+}).describe('Display vendor cards. Only vendor IDs needed - details enriched server-side, distances fetched client-side.');
 
 export type VendorCardsPayload = z.infer<typeof vendorCardsSchema>;
-
-export const getCustomVendorCardsWidget = (isProd?: boolean) => {
-  const vendorDetailsToolId = isProd ? '86dc78e28f933225750d9bcff7c94b18-CPgsswom7FkUYvplmy6H': 'CPgsswom7FkUYvplmy6H';
-  const distanceMatrixToolId = isProd ? '82a0f402ed32bf51cfcb2c3baeb67d57-DwsbeKAxOctXSGgghvW8' : 'DwsbeKAxOctXSGgghvW8';
-  return createWidget({
-    widgetType: 'vendor-cards',
-    reactDOM: ReactDOM,
-    schema: vendorCardsSchema,
-    enrich: {
-      /** fetch vendor details from the list of IDs */
-      vendorDetails: {
-        toolId: vendorDetailsToolId,
-        inputs: {
-          vendorIds: "${vendors|map('vendor_id')|join(',')}",
-        },
-      },
-      /* calculate distance from user to each vendor */
-      distanceMatrix: {
-        toolId: distanceMatrixToolId,
-        inputs: {
-          origin: "${fromCoordinates}",
-          destinations: "${vendors|map('vendorCoordinates')}",
-        },
-      }
-    },
-    render: (payload, enriched) => (
-      <VendorCards
-        payload={payload as VendorCardsPayload}
-        enriched={enriched as VendorCardsEnriched}
-        onAddToList={(vendorId) => {
-          window.dispatchEvent(new CustomEvent('vendor-selected', {
-            detail: { vendorId }
-          }));
-        }}
-      />
-    ),
-  });
-};
 
 type VendorDetail = {
   _id: string;
@@ -159,29 +122,110 @@ export type VendorCardsEnriched = {
   };
 };
 
-interface VendorCardsProps {
+interface HybridVendorCardsProps {
   payload: VendorCardsPayload;
-  enriched?: VendorCardsEnriched;
+  vendorDetails: VendorCardsEnriched['vendorDetails'];
+  distanceMatrixToolId: string;
+  invokeTool?: InvokeTool;
+  messageContext?: MessageContext;
   onAddToList?: (vendorId: string) => void;
 }
 
-export function VendorCards({ payload, enriched, onAddToList }: VendorCardsProps) {
-  if (!enriched || !enriched.vendorDetails || !enriched.distanceMatrix) {
-    return <div>Outdated vendor-cards widget</div>;
-  }
+/**
+ * Component for hybrid enrichment: vendor details from server, distance from client.
+ * Cards render immediately with full details, distance fills in progressively.
+ */
+export function HybridVendorCards({
+  payload,
+  vendorDetails,
+  distanceMatrixToolId,
+  invokeTool,
+  onAddToList,
+}: HybridVendorCardsProps) {
+  const [distanceMatrix, setDistanceMatrix] = useState<VendorCardsEnriched['distanceMatrix']>();
+  const [loadingDistance, setLoadingDistance] = useState(true);
 
-  const { vendorDetails, distanceMatrix } = enriched;
-  const vendorData = (vendorDetails?.data as unknown as Record<string, VendorDetail>) ?? {};
-  const distances = (distanceMatrix?.data as unknown as DistanceEntry[]) ?? [];
+  // Track if we've already fetched to prevent re-fetches on re-render
+  const hasFetchedRef = useRef(false);
 
-  // Helper to format distance in meters to miles
+  // Create stable dependency keys from payload data
+  const vendorIds = useMemo(
+    () => payload.vendors.map(v => v.vendor_id).join(','),
+    [payload.vendors]
+  );
+  const originKey = `${payload.fromCoordinates.latitude},${payload.fromCoordinates.longitude}`;
+  const hasVendorDetails = vendorDetails?.success ?? false;
+
+  // Fetch distance matrix client-side
+  useEffect(() => {
+    if (hasFetchedRef.current) {
+      return;
+    }
+
+    if (!invokeTool || !hasVendorDetails) {
+      setLoadingDistance(false);
+      return;
+    }
+
+    const fetchDistance = async () => {
+      hasFetchedRef.current = true;
+
+      try {
+        const vendorData = vendorDetails?.data as Record<string, { location?: { coordinates?: { latitude: number; longitude: number } } }>;
+
+        // Build destinations from vendor coordinates
+        const destinations = payload.vendors.map(v => {
+          const detail = vendorData?.[v.vendor_id];
+          return detail?.location?.coordinates ?? null;
+        }).filter(Boolean);
+
+        if (destinations.length === 0) {
+          setLoadingDistance(false);
+          return;
+        }
+
+        const distanceResult = await invokeTool(distanceMatrixToolId, {
+          args: {
+            origin: payload.fromCoordinates,
+            destinations,
+          },
+        });
+
+        setDistanceMatrix(
+          distanceResult.success
+            ? { success: true, data: distanceResult.data as DistanceEntry[] }
+            : { success: false }
+        );
+      } catch (error) {
+        console.warn('[HybridVendorCards] Distance fetch failed:', error);
+        setDistanceMatrix({ success: false });
+      } finally {
+        setLoadingDistance(false);
+      }
+    };
+
+    fetchDistance();
+  }, [invokeTool, vendorIds, originKey, hasVendorDetails, distanceMatrixToolId, payload, vendorDetails]);
+
+  // Format distance helper
   const formatDistance = (meters: number): string => {
     const miles = meters / 1609.34;
     return miles < 0.1 ? '< 0.1 mi' : `${miles.toFixed(1)} mi`;
   };
 
+  if (!vendorDetails) {
+    return <div>Loading vendor details...</div>;
+  }
+
+  const vendorData = (vendorDetails?.data as unknown as Record<string, VendorDetail>) ?? {};
+  const distances = (distanceMatrix?.data as unknown as DistanceEntry[]) ?? [];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* Shimmer animation - rendered once for all cards */}
+      {loadingDistance && (
+        <style>{`@keyframes hybrid-vendor-cards-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+      )}
       {payload.vendors.map((v, index) => {
         const data = vendorData[v.vendor_id];
         const name = data?.names?.[0]?.value ?? 'Unknown';
@@ -191,7 +235,6 @@ export function VendorCards({ payload, enriched, onAddToList }: VendorCardsProps
         const hourlyRate = data?.financials?.fees?.find(f => f.fee_type?.includes('Hourly'))?.amount;
         const avgRating = data?.avg_rating;
         const reviewCount = data?.review_count;
-        const booleans = data?.booleans;
         const verification = data?.verification;
         const cnScore = data?.quality_scores?.completeness_score;
         const subtypes = data?.subtype ?? [];
@@ -254,17 +297,17 @@ export function VendorCards({ payload, enriched, onAddToList }: VendorCardsProps
             </div>
 
             {/* Rating row */}
-            {(reviewCount || cnScore) && (
+            {(reviewCount != null || cnScore != null) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#6b7280' }}>
-                {avgRating && (
+                {avgRating != null && (
                   <>
                     <span style={{ color: '#facc15' }}>★</span>
                     <span>{avgRating.toFixed(1)}</span>
-                    {reviewCount && <span style={{ color: '#9ca3af' }}>({reviewCount} reviews)</span>}
+                    {reviewCount != null && <span style={{ color: '#9ca3af' }}>({reviewCount} reviews)</span>}
                   </>
                 )}
-                {avgRating && cnScore ? <span style={{ color: '#9ca3af' }}>•</span> : null}
-                {cnScore ? <span>CN Score: {cnScore}</span> : null}
+                {avgRating != null && cnScore != null ? <span style={{ color: '#9ca3af' }}>•</span> : null}
+                {cnScore != null ? <span>CN Score: {cnScore}</span> : null}
               </div>
             )}
 
@@ -282,13 +325,27 @@ export function VendorCards({ payload, enriched, onAddToList }: VendorCardsProps
               </div>
             )}
 
-            {/* Distance */}
-            {distance && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6b7280' }}>
-                <span>📍</span>
-                <span>{distance} from {payload.fromLocation}</span>
-              </div>
-            )}
+            {/* Distance - reserve space to prevent layout shift */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#6b7280', minHeight: '1.25rem' }}>
+              {loadingDistance ? (
+                <>
+                  <span>📍</span>
+                  <span style={{
+                    width: '100px',
+                    height: '0.875rem',
+                    background: 'linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'hybrid-vendor-cards-shimmer 1.5s infinite',
+                    borderRadius: '0.25rem',
+                  }} />
+                </>
+              ) : distance ? (
+                <>
+                  <span>📍</span>
+                  <span>{distance} from {payload.fromLocation}</span>
+                </>
+              ) : null}
+            </div>
 
             {/* Rate */}
             {hourlyRate && (

@@ -20,7 +20,7 @@
     "zod": "3.25.76"
   },
   "dependencies": {
-    "@ensembleapp/client-sdk": "^0.0.35",
+    "@ensembleapp/client-sdk": "0.0.39",
     "@swc/helpers": "^0.5.18",
     "styled-jsx": "^5.1.6"
   },

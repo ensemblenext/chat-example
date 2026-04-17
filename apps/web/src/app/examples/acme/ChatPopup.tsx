@@ -1,10 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { createWidget, type EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
+import { type EmbeddableChatWidgetConfig } from '@ensembleapp/client-sdk';
 import { useFetchToken } from '@/hooks/useFetchToken';
-import { getCustomVendorCardsWidget } from '../../../components/widgets/VendorCards';
+import { customChatWidgets } from '../../../components/widgets/chat-widgets';
 
-const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
+// const sdkVersion = process.env.NEXT_PUBLIC_SDK_VERSION ?? 'latest';
+const sdkVersion = '0.0.39';
 const widgetURL = `https://cdn.jsdelivr.net/npm/@ensembleapp/client-sdk@${sdkVersion}/dist/widget/widget.global.js`;
 
 interface ChatPopupProps {
@@ -73,11 +74,8 @@ export function ChatPopup({ threadId, dataContext, onError }: ChatPopupProps) {
         },
         dataContext,
         onAuthError: fetchToken,
-        widgets: window.ChatWidget!.getVendorCardsWidget(false),
         // custom widgets running in your React root
-        // widgets: [
-        //   getCustomVendorCardsWidget(false),
-        // ],
+        widgets: customChatWidgets,
         popupSize: { width: '800px' },
       });
 
