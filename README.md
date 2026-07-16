@@ -22,6 +22,9 @@ NEXT_PUBLIC_SDK_VERSION=latest
 # Token endpoint (use /api/chat-token for local Next.js API route)
 NEXT_PUBLIC_TOKEN_ENDPOINT=/api/chat-token
 
+# Ensemble Agent ID - Get from https://ensembleapp.ai
+NEXT_PUBLIC_AGENT_ID=your_agent_id_here
+
 # Ensemble secrets - Get from https://ensembleapp.ai
 # IMPORTANT: Do NOT prefix with NEXT_PUBLIC_ (server-side only)
 ENSEMBLE_KEY_ID=your_key_id_here
