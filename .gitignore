@@ -13,3 +13,4 @@ firebase-debug.log
 .apphosting/
 
 .DS_Store
+config.bat
