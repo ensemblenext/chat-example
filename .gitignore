@@ -5,4 +5,3 @@
 apps/server/.env.development
 /apps/server/node_modules
 /apps/server/.turbo
-config.bat
